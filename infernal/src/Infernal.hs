@@ -1,4 +1,4 @@
-module Infernal.Import where
+module Infernal where
 
 import Control.Monad (forever, void)
 import Data.Aeson (encode)
@@ -7,7 +7,7 @@ import qualified Data.CaseInsensitive as CI
 import Data.Maybe (isJust)
 import qualified Data.Text as Text
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
-import Infernal.Prelude
+import Heart.App.SuperPrelude
 import qualified Network.HTTP.Client as HC
 import qualified Network.HTTP.Types as HT
 import System.Exit (ExitCode)
