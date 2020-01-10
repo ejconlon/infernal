@@ -1,0 +1,13 @@
+resolver: lts-14.20
+
+packages:
+- .
+
+docker:
+  enable: false
+  repo: fpco/stack-build-small
+
+extra-deps:
+- heart-core-0.1.1
+- heart-app-0.1.1
+- ../infernal

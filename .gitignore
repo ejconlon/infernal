@@ -1,5 +1,5 @@
 .stack-work/
-infernal.cabal
+.build/
 *~
 *.swo
 *.swp

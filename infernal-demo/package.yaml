@@ -1,4 +1,4 @@
-name:                infernal
+name:                infernal-demo
 version:             0.1.0
 github:              "ejconlon/infernal"
 license:             BSD3
@@ -10,21 +10,6 @@ description: Please see the README on GitHub at <https://github.com/ejconlon/inf
 
 dependencies:
 - base >= 4.12 && < 5
-- aeson >=1.4
-- binary >= 0.8
-- bytestring >=0.10
-- case-insensitive >=1.2
-- containers >=0.6
-- exceptions >=0.10
-- heart-core >=0.1.1
-- heart-app >=0.1.1
-- http-client >=0.6
-- http-types >=0.12
-- mtl >=2.2
-- text >=1.2
-- unliftio >=0.2
-- unordered-containers >=0.2
-- wai >=3.2
 
 default-extensions:
   - ConstraintKinds
@@ -51,19 +36,17 @@ ghc-options:
 - -Wredundant-constraints
 - -fno-warn-unused-top-binds
 
-library:
-  source-dirs: src
-
-tests:
-  infernal-test:
-    main:                Tasty.hs
-    source-dirs:         test
+executables:
+  infernal-demo:
+    main:                Main.hs
+    source-dirs:         app
     ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
+      - -threaded
+      - -rtsopts
+      - -O2
+      - -static
+      - -with-rtsopts=-N
+    cc-options: -static
+    ld-options: -static -pthread
     dependencies:
     - infernal
-    - tasty
-    - tasty-discover
-    - tasty-hunit
