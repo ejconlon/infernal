@@ -1,0 +1,77 @@
+name:                infernal
+version:             0.1.0
+github:              "githubuser/infernal"
+license:             BSD3
+author:              "Author name here"
+maintainer:          "example@example.com"
+copyright:           "(c) 2020 Author name here"
+
+extra-source-files:
+- README.md
+
+description: Please see the README on GitHub at <https://github.com/githubuser/infernal#readme>
+
+dependencies:
+- base >= 4.12 && < 5
+
+default-extensions:
+  - ConstraintKinds
+  - DataKinds
+  - DeriveFunctor
+  - DeriveFoldable
+  - DeriveGeneric
+  - DeriveTraversable
+  - FlexibleContexts
+  - FlexibleInstances
+  - FunctionalDependencies
+  - GADTs
+  - GeneralizedNewtypeDeriving
+  - KindSignatures
+  - LambdaCase
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - Rank2Types
+  - TemplateHaskell
+  - TupleSections
+  - TypeApplications
+  - TypeFamilies
+
+ghc-options:
+- -Wall
+- -Wcompat
+- -Widentities
+- -Wincomplete-record-updates
+- -Wincomplete-uni-patterns
+- -Wpartial-fields
+- -Wredundant-constraints
+- -fno-warn-unused-top-binds
+
+library:
+  source-dirs: src
+
+executables:
+  infernal-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - infernal
+
+tests:
+  infernal-test:
+    main:                Tasty.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - infernal
+    - tasty
+    - tasty-discover
+    - tasty-hunit

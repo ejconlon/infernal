@@ -1,0 +1,5 @@
+.stack-work/
+infernal.cabal
+*~
+*.swo
+*.swp
