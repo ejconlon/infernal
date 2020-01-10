@@ -1,5 +1,5 @@
 module Infernal.Prelude
-  ( module Prelude
+  ( module Heart.App.SuperPrelude
   ) where
 
-import Prelude
+import Heart.App.SuperPrelude

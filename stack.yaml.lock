@@ -5,19 +5,19 @@
 
 packages:
 - completed:
-    hackage: heart-core-0.1.0@sha256:b6a636945681716a4d7c126cbd5232e76cb7046ab0e8faf666e20dfde0242285,2167
+    hackage: heart-core-0.1.1@sha256:d95495760448378924296532d57562f6e54e262528878ba545e3440ecbf16d90,1949
     pantry-tree:
       size: 811
-      sha256: 21bdfeaefabb4f7fd12c8b55bf7d1dddf8d15fb8292cb8df903cdff65bc90e1c
+      sha256: 87d58b248f1cadf917752b3cf0f43640d114ac6714411091b4f3b3b9dfa98425
   original:
-    hackage: heart-core-0.1.0
+    hackage: heart-core-0.1.1
 - completed:
-    hackage: heart-app-0.1.0@sha256:d62351bf8cf35cf71ce9d3e5eab0204711245747a051183c36ea6e124f51bc7d,1872
+    hackage: heart-app-0.1.1@sha256:e9f67f8cd4e020a3cf0c6abb5827b04ecfd0e595bebe6ff2673b28765d8f8456,1874
     pantry-tree:
       size: 476
-      sha256: 88ad12b81c8f488e2ad5d51b6855386151d8b50bacaa229f418f7ad7abd43576
+      sha256: 18bdaba8d689df52105b6808e24d3b64707db7f9b313b22e8203591abb8c9649
   original:
-    hackage: heart-app-0.1.0
+    hackage: heart-app-0.1.1
 snapshots:
 - completed:
     size: 524154

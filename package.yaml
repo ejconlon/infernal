@@ -18,37 +18,28 @@ dependencies:
 - bytestring >=0.10
 - case-insensitive >=1.2
 - containers >=0.6
-- heart-core >=0.1
-- heart-app >=0.1
+- exceptions >=0.10
+- heart-core >=0.1.1
+- heart-app >=0.1.1
 - http-client >=0.6
 - http-types >=0.12
 - mtl >=2.2
 - text >=1.2
+- unliftio >=0.2
 - unordered-containers >=0.2
 - wai >=3.2
 
 default-extensions:
   - ConstraintKinds
-  - DataKinds
   - DeriveFunctor
   - DeriveFoldable
   - DeriveGeneric
   - DeriveTraversable
-  - FlexibleContexts
-  - FlexibleInstances
-  - FunctionalDependencies
   - GADTs
   - GeneralizedNewtypeDeriving
-  - KindSignatures
-  - LambdaCase
-  - MultiParamTypeClasses
-  - MultiWayIf
   - NoImplicitPrelude
   - OverloadedStrings
-  - Rank2Types
   - TemplateHaskell
-  - TupleSections
-  - TypeApplications
   - TypeFamilies
 
 ghc-options:

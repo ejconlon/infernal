@@ -4,5 +4,5 @@ packages:
 - .
 
 extra-deps:
-- heart-core-0.1.0
-- heart-app-0.1.0
+- heart-core-0.1.1
+- heart-app-0.1.1
