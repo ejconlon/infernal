@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 3739801afc909ff810cbbbfa24692816ef5ff19c906d942d937a3ca53f895f78
+-- hash: 5237b64701f5e5dd43e30c056e2e6dc087678b914abbc7f32426a812c2d6c102
 
 name:           infernal-demo
 version:        0.1.0
@@ -32,6 +32,9 @@ executable infernal-demo
   cc-options: -static
   ld-options: -static -pthread
   build-depends:
-      base >=4.12 && <5
+      aeson >=1.4
+    , base >=4.12 && <5
+    , heart-app >=0.1.1
     , infernal
+    , text >=1.2
   default-language: Haskell2010

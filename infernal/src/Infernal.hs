@@ -1,7 +1,7 @@
 module Infernal where
 
 import Control.Monad (forever, void)
-import Data.Aeson (encode)
+import Data.Aeson ((.=), encode, pairs)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.CaseInsensitive as CI
 import Data.Maybe (isJust)
@@ -11,11 +11,16 @@ import Heart.App.SuperPrelude
 import qualified Network.HTTP.Client as HC
 import qualified Network.HTTP.Types as HT
 import System.Exit (ExitCode)
+import System.IO (BufferMode (LineBuffering), hSetBuffering, stderr, stdout)
+-- import UnliftIO.Concurrent (forkIO)
 import UnliftIO.Environment (getEnv)
 
 -- TODO This should go in heart-core, along with catch functions
 unliftRIO :: MonadIO m => env -> m (UnliftIO (RIO env))
 unliftRIO env = liftIO (runRIO env askUnliftIO)
+
+unliftPure :: UnliftIO IO
+unliftPure = UnliftIO id
 
 newtype LambdaRequestId = LambdaRequestId
   { _unLambdaRequestId :: Text
@@ -34,14 +39,16 @@ data LambdaRequest = LambdaRequest
 $(makeLenses ''LambdaRequest)
 
 data LambdaError = LambdaError
-  { _lerrType :: !Text
-  , _lerrMessage :: !Text
+  { _lerrErrorType :: !Text
+  , _lerrErrorMessage :: !Text
   } deriving stock (Eq, Show, Typeable, Generic)
-    deriving ToJSON via (AesonRecord LambdaError)
 
 $(makeLenses ''LambdaError)
 
 instance Exception LambdaError
+
+instance ToJSON LambdaError where
+  toEncoding (LambdaError ty msg) = pairs ("errorType" .= ty <> "errorMessage" .= msg)
 
 defaultLambdaError :: LambdaError
 defaultLambdaError = LambdaError "InternalError" "No information is available."
@@ -83,11 +90,11 @@ defaultCallbackConfig runCb = CallbackConfig runCb (\_ _ -> pure defaultLambdaEr
 unliftInto :: MonadIO m => UnliftIO n -> n a -> m a
 unliftInto (UnliftIO runIO) n = liftIO (runIO n)
 
-castLambdaError :: Typeable a => a -> Maybe LambdaError
-castLambdaError = cast
+castLambdaError :: SomeException -> Maybe LambdaError
+castLambdaError = fromException
 
-castExitCode :: Typeable a => a -> Maybe ExitCode
-castExitCode = cast
+castExitCode :: SomeException -> Maybe ExitCode
+castExitCode = fromException
 
 catchRethrowWhen :: MonadCatch m => (SomeException -> Bool) -> m a -> (SomeException -> m a) -> m a
 catchRethrowWhen predicate act handler = catch act (\err -> handler err >>= if predicate err then const (throwM err) else pure)
@@ -104,16 +111,20 @@ handleInvokeError postErr unio invokeErrCb lamReq err = do
   logError ("Caught invocation error for request id " <> lamIdText <> ":")
   logException err
   lamErr <- case castLambdaError err of
-    Just lamErr -> pure lamErr
-    Nothing -> unliftInto unio (invokeErrCb lamReq err)
-  logError ("Posting invocation error for request id " <> lamIdText <> ":")
-  logException lamErr
+    Just lamErr -> do
+      logError ("Posting original invocation error for request id " <> lamIdText)
+      pure lamErr
+    Nothing -> do
+      lamErr <- unliftInto unio (invokeErrCb lamReq err)
+      logError ("Posting new invocation error for request id " <> lamIdText <> ":")
+      logException lamErr
+      pure lamErr
   postErr (_lreqId lamReq) lamErr
 
 guardInvokeError :: (MonadCatch m, WithSimpleLog env m) => PostLambdaInvokeError m -> UnliftIO n -> InvokeErrorCallback n -> LambdaRequest -> m () -> m ()
 guardInvokeError postErr unio invokeErrCb lamReq body = catchRethrowExitCode body (handleInvokeError postErr unio invokeErrCb lamReq)
 
-pollAndRespond :: (MonadCatch m, WithSimpleLog env m) => LambdaClient m -> UnliftIO n -> CallbackConfig n -> m ()
+pollAndRespond :: (MonadCatch m, MonadUnliftIO m, WithSimpleLog env m) => LambdaClient m -> UnliftIO n -> CallbackConfig n -> m ()
 pollAndRespond client unio cbc = do
   let runCb = _cbcRunCallback cbc
       invokeErrCb = _cbcInvokeErrorCallback cbc
@@ -123,8 +134,7 @@ pollAndRespond client unio cbc = do
   lamReq <- _lcGetLambdaRequest client
   let lamIdText = _unLambdaRequestId (_lreqId lamReq)
   logDebug ("Servicing request id " <> lamIdText)
-  -- TODO bracket to set x-ray trace id from request in env
-  -- TODO fork a thread off here to handle the request, or use a pool
+  -- TODO enforce deadline
   guardInvokeError postErr unio invokeErrCb lamReq $ do
     lamRepBody <- unliftInto unio (runCb lamReq)
     let lamReqId = _lreqId lamReq
@@ -132,7 +142,7 @@ pollAndRespond client unio cbc = do
     postRep lamReqId lamRepBody
     logDebug ("Finished request id " <> lamIdText)
 
-pollLoop :: (MonadCatch m, WithSimpleLog env m) => LambdaClient m -> UnliftIO n -> CallbackConfig n -> m ()
+pollLoop :: (MonadCatch m, MonadUnliftIO m, WithSimpleLog env m) => LambdaClient m -> UnliftIO n -> CallbackConfig n -> m ()
 pollLoop client unio cbc =
   let uncaughtErrCb = _cbcUncaughtErrorCallback cbc
   in forever $ catchRethrowExitCode (pollAndRespond client unio cbc) $ \err -> do
@@ -289,7 +299,7 @@ lambdaClientImpl = LambdaClient
 httpManagerSettings :: HC.ManagerSettings
 httpManagerSettings = HC.defaultManagerSettings { HC.managerResponseTimeout = HC.responseTimeoutNone }
 
-mkMain :: (MonadCatch m, WithSimpleLog env m) => UnliftIO n -> InitErrorCallback n -> n (CallbackConfig n) -> m ()
+mkMain :: (MonadCatch m, MonadUnliftIO m, WithSimpleLog env m) => UnliftIO n -> InitErrorCallback n -> n (CallbackConfig n) -> m ()
 mkMain unio initErrCb cbcInit = do
   logDebug "Initializing lambda environment"
   lambdaEnv <- newLambdaEnv
@@ -305,3 +315,11 @@ mkMain unio initErrCb cbcInit = do
       _lcPostLambdaInitError client lamErr
     logDebug "Starting poll loop"
     pollLoop client unio cbc
+
+mkSimpleMain :: RunCallback (RIO App) -> IO ()
+mkSimpleMain cb = do
+  hSetBuffering stdout LineBuffering
+  hSetBuffering stderr LineBuffering
+  app <- newApp
+  unio <- unliftRIO app
+  runRIO app (mkMain unio defaultInitErrorCallback (pure (defaultCallbackConfig cb)))

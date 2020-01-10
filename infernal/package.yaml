@@ -16,7 +16,6 @@ dependencies:
 - case-insensitive >=1.2
 - containers >=0.6
 - exceptions >=0.10
-- heart-core >=0.1.1
 - heart-app >=0.1.1
 - http-client >=0.6
 - http-types >=0.12
@@ -53,17 +52,3 @@ ghc-options:
 
 library:
   source-dirs: src
-
-tests:
-  infernal-test:
-    main:                Tasty.hs
-    source-dirs:         test
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - infernal
-    - tasty
-    - tasty-discover
-    - tasty-hunit
