@@ -1,3 +1,17 @@
+.PHONY: cisetup
+cisetup:
+	stack setup
+
+.PHONY: citest
+citest: test
+
+.PHONY: cidocs
+cidocs: docs
+
+.PHONY: cicompress
+cicompress:
+	tar -cvzf /tmp/haddock.tar.gz -C $$(stack path --local-install-root) doc
+
 .PHONY: build
 build:
 	stack build
@@ -21,9 +35,17 @@ splices: buildsplices printsplices
 test:
 	stack test
 
+.PHONY: ghci
+ghci:
+	stack ghci --ghci-options "-ghci-script .ghci-manual"
+
+.PHONY: docs
+docs:
+	stack haddock --no-haddock-deps
+
 .PHONY: deps
 deps:
-	stack install apply-refact hlint stylish-haskell ghcid
+	stack build --copy-compiler-tool apply-refact hlint stylish-haskell ghcid
 
 .PHONY: watch
 watch:
