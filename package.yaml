@@ -35,6 +35,8 @@ default-extensions:
   - DeriveFoldable
   - DeriveGeneric
   - DeriveTraversable
+  - DerivingStrategies
+  - DerivingVia
   - GADTs
   - GeneralizedNewtypeDeriving
   - NoImplicitPrelude
