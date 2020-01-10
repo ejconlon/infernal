@@ -1,18 +1,21 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE UndecidableInstances #-}
-
 module Infernal.Import where
 
 import Control.Monad (forever, void)
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.CaseInsensitive as CI
 import Data.Maybe (isJust)
 import qualified Data.Text as Text
+import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Infernal.Prelude
 import qualified Network.HTTP.Client as HC
 import qualified Network.HTTP.Types as HT
 import System.Exit (ExitCode)
 import UnliftIO.Environment (getEnv)
+
+-- TODO This should go in heart-core, along with catch functions
+unliftRIO :: MonadIO m => env -> m (UnliftIO (RIO env))
+unliftRIO env = liftIO (runRIO env askUnliftIO)
 
 newtype LambdaRequestId = LambdaRequestId
   { _unLambdaRequestId :: Text
@@ -22,13 +25,13 @@ $(makeLenses ''LambdaRequestId)
 
 data LambdaRequest = LambdaRequest
   { _lreqId :: !LambdaRequestId
+  , _lreqTraceId :: !Text
+  , _lreqFunctionArn :: !Text
+  , _lreqDeadlineMs :: !Text
   , _lreqBody :: !LBS.ByteString
-  } deriving stock (Eq, Show, Generic)
+  } deriving stock (Eq, Show)
 
 $(makeLenses ''LambdaRequest)
-
-instance FromJSON LambdaRequest where
-  parseJSON = undefined
 
 data LambdaError = LambdaError
   { _lerrType :: !Text
@@ -77,8 +80,8 @@ $(makeLenses ''CallbackConfig)
 defaultCallbackConfig :: Applicative n => RunCallback n -> CallbackConfig n
 defaultCallbackConfig runCb = CallbackConfig runCb (\_ _ -> pure defaultLambdaError) (\_ -> pure ())
 
-runlift :: MonadIO m => UnliftIO n -> n a -> m a
-runlift (UnliftIO runIO) n = liftIO (runIO n)
+unliftInto :: MonadIO m => UnliftIO n -> n a -> m a
+unliftInto (UnliftIO runIO) n = liftIO (runIO n)
 
 castLambdaError :: Typeable a => a -> Maybe LambdaError
 castLambdaError = cast
@@ -95,40 +98,47 @@ catchRethrow act handler = catch act (\err -> handler err >> throwM err)
 catchRethrowExitCode :: MonadCatch m => m a -> (SomeException -> m a) -> m a
 catchRethrowExitCode = catchRethrowWhen (isJust . castExitCode)
 
-handleGuardError :: MonadIO m => PostLambdaInvokeError m -> UnliftIO n -> InvokeErrorCallback n -> LambdaRequest -> SomeException -> m ()
-handleGuardError postErr unio invokeErrCb lamReq err = do
+handleInvokeError :: WithSimpleLog env m => PostLambdaInvokeError m -> UnliftIO n -> InvokeErrorCallback n -> LambdaRequest -> SomeException -> m ()
+handleInvokeError postErr unio invokeErrCb lamReq err = do
+  let lamIdText = _unLambdaRequestId (_lreqId lamReq)
+  logError ("Caught invocation error for request id " <> lamIdText <> ":")
+  logException err
   lamErr <- case castLambdaError err of
     Just lamErr -> pure lamErr
-    Nothing -> runlift unio (invokeErrCb lamReq err)
+    Nothing -> unliftInto unio (invokeErrCb lamReq err)
+  logError ("Posting invocation error for request id " <> lamIdText <> ":")
+  logException lamErr
   postErr (_lreqId lamReq) lamErr
 
-guardInvokeError :: (MonadCatch m, MonadIO m) => PostLambdaInvokeError m -> UnliftIO n -> InvokeErrorCallback n -> LambdaRequest -> m () -> m ()
-guardInvokeError postErr unio invokeErrCb lamReq body = catchRethrowExitCode body (handleGuardError postErr unio invokeErrCb lamReq)
+guardInvokeError :: (MonadCatch m, WithSimpleLog env m) => PostLambdaInvokeError m -> UnliftIO n -> InvokeErrorCallback n -> LambdaRequest -> m () -> m ()
+guardInvokeError postErr unio invokeErrCb lamReq body = catchRethrowExitCode body (handleInvokeError postErr unio invokeErrCb lamReq)
 
-pollAndRespond :: (MonadCatch m, MonadIO m) => LambdaClient m -> UnliftIO n -> CallbackConfig n -> m ()
+pollAndRespond :: (MonadCatch m, WithSimpleLog env m) => LambdaClient m -> UnliftIO n -> CallbackConfig n -> m ()
 pollAndRespond client unio cbc = do
   let runCb = _cbcRunCallback cbc
       invokeErrCb = _cbcInvokeErrorCallback cbc
       postErr = _lcPostLambdaInvokeError client
       postRep = _lcPostLambdaResponse client
+  logDebug "Polling for request"
   lamReq <- _lcGetLambdaRequest client
+  let lamIdText = _unLambdaRequestId (_lreqId lamReq)
+  logDebug ("Servicing request id " <> lamIdText)
   -- TODO bracket to set x-ray trace id from request in env
+  -- TODO fork a thread off here to handle the request, or use a pool
   guardInvokeError postErr unio invokeErrCb lamReq $ do
-    lamRepBody <- runlift unio (runCb lamReq)
+    lamRepBody <- unliftInto unio (runCb lamReq)
     let lamReqId = _lreqId lamReq
+    logDebug ("Posting response to request id " <> lamIdText)
     postRep lamReqId lamRepBody
+    logDebug ("Finished request id " <> lamIdText)
 
-pollLoop :: (MonadCatch m, MonadIO m) => LambdaClient m -> UnliftIO n -> CallbackConfig n -> m ()
+pollLoop :: (MonadCatch m, WithSimpleLog env m) => LambdaClient m -> UnliftIO n -> CallbackConfig n -> m ()
 pollLoop client unio cbc =
   let uncaughtErrCb = _cbcUncaughtErrorCallback cbc
-  in forever (catchRethrowExitCode (pollAndRespond client unio cbc) (runlift unio . uncaughtErrCb))
-
-handleInitError :: MonadIO m => PostLambdaInitError m -> UnliftIO n -> InitErrorCallback n -> SomeException -> m ()
-handleInitError postErr unio initErrCb err = do
-  lamErr <- case castLambdaError err of
-    Just lamErr -> pure lamErr
-    Nothing -> runlift unio (initErrCb err)
-  postErr lamErr
+  in forever $ catchRethrowExitCode (pollAndRespond client unio cbc) $ \err -> do
+    logError "Handling uncaught error:"
+    logException err
+    unliftInto unio (uncaughtErrCb err)
 
 data LambdaVars = LambdaVars
   { _lvLogGroupName :: !Text
@@ -219,8 +229,28 @@ initRequest suffix = do
   url <- formatUrl suffix
   HC.parseUrlThrow (Text.unpack url)
 
+missingHeaderError :: Text -> LambdaError
+missingHeaderError name = LambdaError "MissingHeaderError" ("Missing header " <> name <> " in next invocation request.")
+
+lookupHeader :: MonadThrow m => Text -> HT.ResponseHeaders -> m Text
+lookupHeader name headers =
+  case lookup (CI.mk (encodeUtf8 name)) headers of
+    Nothing -> throwM (missingHeaderError name)
+    Just value -> pure (decodeUtf8 value)
+
 parseLambdaRequest :: MonadThrow m => HT.ResponseHeaders -> LBS.ByteString -> m LambdaRequest
-parseLambdaRequest = undefined
+parseLambdaRequest headers body = do
+  reqId <- lookupHeader "Lambda-Runtime-Aws-Request-Id" headers
+  traceId <- lookupHeader "Lambda-Runtime-Trace-Id" headers
+  functionArn <- lookupHeader "Lambda-Runtime-Invoked-Function-Arn" headers
+  deadlineMs <- lookupHeader "Lambda-Runtime-Deadline-Ms" headers
+  pure $ LambdaRequest
+    { _lreqId = LambdaRequestId reqId
+    , _lreqTraceId = traceId
+    , _lreqFunctionArn = functionArn
+    , _lreqDeadlineMs = deadlineMs
+    , _lreqBody = body
+    }
 
 getLambdaRequestImpl :: MonadLambdaImpl env m => GetLambdaRequest m
 getLambdaRequestImpl = do
@@ -266,10 +296,10 @@ mkMain unio initErrCb cbcInit = do
   runRIO lambdaEnv $ do
     let client = lambdaClientImpl
     logDebug "Initializing callbacks"
-    cbc <- catchRethrow (runlift unio cbcInit) $ \err -> do
+    cbc <- catchRethrow (unliftInto unio cbcInit) $ \err -> do
       logError "Caught initialization error:"
       logException err
-      lamErr <- runlift unio (initErrCb err)
+      lamErr <- unliftInto unio (initErrCb err)
       logError "Posting mapped initialization error:"
       logException lamErr
       _lcPostLambdaInitError client lamErr
