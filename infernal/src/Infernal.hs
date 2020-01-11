@@ -1,4 +1,19 @@
-module Infernal where
+module Infernal
+  ( CallbackConfig (..)
+  , InitErrorCallback
+  , InvokeErrorCallback
+  , LambdaError (..)
+  , LambdaRequestId (..)
+  , LambdaRequest (..)
+  , LambdaVars (..)
+  , RunCallback
+  , UncaughtErrorCallback
+  , defaultCallbackConfig
+  , defaultLambdaError
+  , defaultInitErrorCallback
+  , mkMain
+  , mkSimpleMain
+  ) where
 
 import Control.Monad (forever, void)
 import Data.Aeson (encode, pairs, (.=))
@@ -307,14 +322,15 @@ lambdaClientImpl = LambdaClient
 httpManagerSettings :: HC.ManagerSettings
 httpManagerSettings = HC.defaultManagerSettings { HC.managerResponseTimeout = HC.responseTimeoutNone }
 
-mkMain :: (MonadCatch m, WithSimpleLog env m) => UnliftIO n -> InitErrorCallback n -> n (CallbackConfig n) -> m ()
+mkMain :: (MonadCatch m, WithSimpleLog env m) => UnliftIO n -> InitErrorCallback n -> (LambdaVars -> n (CallbackConfig n)) -> m ()
 mkMain unio initErrCb cbcInit = do
   logDebug "Initializing lambda environment"
   lambdaEnv <- newLambdaEnv
   runRIO lambdaEnv $ do
     let client = lambdaClientImpl
+        lamVars = _leVars lambdaEnv
     logDebug "Initializing callbacks"
-    cbc <- catchRethrow (unliftInto unio cbcInit) $ \err -> do
+    cbc <- catchRethrow (unliftInto unio (cbcInit lamVars)) $ \err -> do
       logError "Caught initialization error:"
       logException err
       lamErr <- unliftInto unio (initErrCb err)
@@ -330,4 +346,4 @@ mkSimpleMain cb = do
   hSetBuffering stderr LineBuffering
   app <- newApp
   unio <- unliftRIO app
-  runRIO app (mkMain unio defaultInitErrorCallback (pure (defaultCallbackConfig cb)))
+  runRIO app (mkMain unio defaultInitErrorCallback (const (pure (defaultCallbackConfig cb))))
