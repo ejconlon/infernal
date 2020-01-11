@@ -2,13 +2,14 @@ name:                infernal
 version:             0.1.0
 github:              "ejconlon/infernal"
 license:             BSD3
+license-file:        LICENSE
 author:              "Eric Conlon"
 maintainer:          "ejconlon@gmail.com"
 copyright:           "(c) 2020 Eric Conlon"
 category:            AWS
 synopsis:            The Infernal Machine - An AWS Lambda Custom Runtime for Haskell
 
-description: The Infernal Machine - An AWS Lambda Custom Runtime for Haskell
+description: Please see the README on GitHub at <https://github.com/ejconlon/infernal#readme>
 
 dependencies:
 - base >= 4.12 && < 5
