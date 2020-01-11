@@ -1,5 +1,5 @@
 name:                infernal
-version:             0.1.0
+version:             0.2.0
 github:              "ejconlon/infernal"
 license:             BSD3
 license-file:        LICENSE
@@ -20,6 +20,7 @@ dependencies:
 - containers >=0.6
 - exceptions >=0.10
 - heart-app >=0.1.1
+- heart-core >=0.1.1
 - http-client >=0.6
 - http-types >=0.12
 - mtl >=2.2

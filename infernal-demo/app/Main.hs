@@ -3,7 +3,9 @@ module Main where
 import Data.Aeson (eitherDecode, encode)
 import qualified Data.Text as Text
 import Infernal
-import Heart.App.SuperPrelude
+import Heart.App.Logging (logDebug)
+import Heart.Core.Aeson (AesonRecord (..))
+import Heart.Core.Prelude
 
 data DislikeNameError = DislikeNameError
   deriving stock (Eq, Show, Typeable)
@@ -27,7 +29,7 @@ decodeRequest = either (throwM . badRequestError . Text.pack) pure . eitherDecod
 
 main :: IO ()
 main = do
-  mkSimpleMain $ \lamReq -> do
+  runSimpleLambda $ \lamReq -> do
     logDebug "In request callback"
     req <- decodeRequest lamReq
     let name = _reqName req

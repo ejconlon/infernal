@@ -1,7 +1,7 @@
 {-|
 The Infernal Machine - An AWS Lambda Custom Runtime for Haskell
 
-See 'mkMain' or 'mkSimpleMain' for entrypoints to build your Lambda function.
+See 'runLambda' or 'runSimpleLambda' for entrypoints to build your Lambda function.
 -}
 module Infernal
   ( CallbackConfig (..)
@@ -16,8 +16,8 @@ module Infernal
   , defaultCallbackConfig
   , defaultLambdaError
   , defaultInitErrorCallback
-  , mkMain
-  , mkSimpleMain
+  , runLambda
+  , runSimpleLambda
   ) where
 
 import Control.Monad (forever, void)
@@ -27,20 +27,16 @@ import qualified Data.CaseInsensitive as CI
 import Data.Maybe (isJust)
 import qualified Data.Text as Text
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
-import Heart.App.SuperPrelude
+import Heart.App.App (App, newApp)
+import Heart.App.Logging (HasSimpleLog (..), SimpleLogAction, WithSimpleLog, logDebug, logError, logException)
+import Heart.Core.Prelude
+import Heart.Core.RIO (RIO, runRIO)
 import qualified Network.HTTP.Client as HC
 import qualified Network.HTTP.Types as HT
 import System.Exit (ExitCode)
 import System.IO (BufferMode (LineBuffering), hSetBuffering, stderr, stdout)
 import Text.Read (readMaybe)
 import UnliftIO.Environment (getEnv)
-
--- TODO This should go in heart-core, along with catch functions
-unliftRIO :: MonadIO m => env -> m (UnliftIO (RIO env))
-unliftRIO env = liftIO (runRIO env askUnliftIO)
-
-unliftPure :: UnliftIO IO
-unliftPure = UnliftIO id
 
 -- | The UUID associated with a Lambda request.
 newtype LambdaRequestId = LambdaRequestId
@@ -53,7 +49,7 @@ data LambdaRequest = LambdaRequest
   , _lreqTraceId :: !Text         -- ^ From the @Lambda-Runtime-Trace-Id@ header
   , _lreqFunctionArn :: !Text     -- ^ From the @Lambda-Runtime-Invoked-Function-Arn@ header
   , _lreqDeadlineMs :: !Int       -- ^ From the @Lambda-Runtime-Deadline-Ms@ header, an epoch deadline in ms
-  , _lreqBody :: !LBS.ByteString  -- ^ The unparsed request body. Typically you will 'decode' this with Aeson.
+  , _lreqBody :: !LBS.ByteString  -- ^ The unparsed request body. Typically you will 'Data.Aeson.decode' this.
   } deriving stock (Eq, Show)
 
 -- | An error formatted to propagate to AWS (<https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html#runtimes-api-invokeerror docs>).
@@ -125,7 +121,7 @@ defaultInitErrorCallback _ = pure defaultLambdaError
 
 -- | The "function" part of your Lambda: takes a request with a JSON-encoded body and returns a JSON-encoded response body. You can throw any 'Exception' and the appropriate error
 --   callbacks will process it. Most importantly, 'LambdaError' will propagate a formatted error to AWS, and 'System.Exit.ExitCode' will halt the program. Except for 'System.Exit.ExitCode',
---   throwing exceptions here will not terminate the main loop (see 'mkMain'). Note that the AWS custom runtime loop implemented in this library is single-threaded (as required - we must finish an invocation
+--   throwing exceptions here will not terminate the main loop (see 'runLambda'). Note that the AWS custom runtime loop implemented in this library is single-threaded (as required - we must finish an invocation
 --   before fetching the next) but you are free to spawn threads in your callback.
 type RunCallback n = LambdaRequest -> n LBS.ByteString
 
@@ -137,14 +133,14 @@ type InvokeErrorCallback n = LambdaRequest -> SomeException -> n LambdaError
 --   Exceptions of type 'System.Exit.ExitCode' will be rethrown after this callback executes.
 type UncaughtErrorCallback n = SomeException -> n ()
 
--- | User callbacks to be invoked by the main loop (see 'mkMain').
+-- | User callbacks to be invoked by the main loop (see 'runLambda').
 data CallbackConfig n = CallbackConfig
   { _cbcRunCallback :: !(RunCallback n)                       -- ^ See 'RunCallback'
   , _cbcInvokeErrorCallback :: !(InvokeErrorCallback n)       -- ^ See 'InvokeErrorCallback'
   , _cbcUncaughtErrorCallback :: !(UncaughtErrorCallback n)   -- ^ See 'UncaughtErrorCallback'
   }
 
--- | A 'CallbackConfig' that returns 'defaultLamdaError' from all error callbacks.
+-- | A 'CallbackConfig' that returns 'defaultLambdaError' from all error callbacks.
 defaultCallbackConfig :: Applicative n => RunCallback n -> CallbackConfig n
 defaultCallbackConfig runCb = CallbackConfig runCb (\_ _ -> pure defaultLambdaError) (\_ -> pure ())
 
@@ -338,16 +334,20 @@ lambdaClientImpl = LambdaClient
 httpManagerSettings :: HC.ManagerSettings
 httpManagerSettings = HC.defaultManagerSettings { HC.managerResponseTimeout = HC.responseTimeoutNone }
 
--- | The full-powered entrypoint underlying 'mkSimpleMain' that allows you to use any 'UnliftIO'-capable monad for your callbacks.
+-- TODO This should go in heart-core, along with catch functions
+unliftRIO :: MonadIO m => env -> m (UnliftIO (RIO env))
+unliftRIO env = liftIO (runRIO env askUnliftIO)
+
+-- | The full-powered entrypoint underlying 'runSimpleLambda' that allows you to use any 'UnliftIO'-capable monad for your callbacks.
 --   This runs the main loop of our AWS Lambda Custom Runtime to fetch invocations, process them, and report errors or results.
 --   Control will not return from this function, and AWS Lambda will terminate the process at its will.
-mkMain ::
+runLambda ::
   (MonadCatch m, WithSimpleLog env m)
   => UnliftIO n                            -- ^ Runs your monad @n@ in IO (see @MonadUnliftIO@ from @unliftio-core@)
   -> InitErrorCallback n                   -- ^ Error mapper for the callback builder
   -> (LambdaVars -> n (CallbackConfig n))  -- ^ Callback builder. When possible, do init work here so the framework can propagate init errors to AWS.
   -> m ()
-mkMain unio initErrCb cbcInit = do
+runLambda unio initErrCb cbcInit = do
   logDebug "Initializing lambda environment"
   lambdaEnv <- newLambdaEnv
   runRIO lambdaEnv $ do
@@ -364,13 +364,13 @@ mkMain unio initErrCb cbcInit = do
     logDebug "Starting poll loop"
     pollLoop client unio cbc
 
--- | A simple entrypoint that delegates to 'mkMain'. Use this as the body of your @main@ function if you want to get a Lambda function up and running quickly.
+-- | A simple entrypoint that delegates to 'runLambda'. Use this as the body of your @main@ function if you want to get a Lambda function up and running quickly.
 --   All you need to do is provide a 'RunCallback' that handles JSON-encoded requests and returns JSON-encoded responses (or throws 'LambdaError' exceptions).
---   Your callback has access to a simple logger (try 'logInfo', for example) whose output will be collected by Lambda and published to CloudWatch.
-mkSimpleMain :: RunCallback (RIO App) -> IO ()
-mkSimpleMain cb = do
+--   Your callback has access to a simple logger (try 'logDebug', for example) whose output will be collected by Lambda and published to CloudWatch.
+runSimpleLambda :: RunCallback (RIO App) -> IO ()
+runSimpleLambda cb = do
   hSetBuffering stdout LineBuffering
   hSetBuffering stderr LineBuffering
   app <- newApp
   unio <- unliftRIO app
-  runRIO app (mkMain unio defaultInitErrorCallback (const (pure (defaultCallbackConfig cb))))
+  runRIO app (runLambda unio defaultInitErrorCallback (const (pure (defaultCallbackConfig cb))))
