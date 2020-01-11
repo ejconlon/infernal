@@ -41,8 +41,6 @@ newtype LambdaRequestId = LambdaRequestId
   { _unLambdaRequestId :: Text
   } deriving newtype (Eq, Show, Ord, IsString, Hashable)
 
-$(makeLenses ''LambdaRequestId)
-
 data LambdaRequest = LambdaRequest
   { _lreqId :: !LambdaRequestId
   , _lreqTraceId :: !Text
@@ -51,14 +49,10 @@ data LambdaRequest = LambdaRequest
   , _lreqBody :: !LBS.ByteString
   } deriving stock (Eq, Show)
 
-$(makeLenses ''LambdaRequest)
-
 data LambdaError = LambdaError
   { _lerrErrorType :: !Text
   , _lerrErrorMessage :: !Text
   } deriving stock (Eq, Show, Typeable, Generic)
-
-$(makeLenses ''LambdaError)
 
 instance Exception LambdaError
 
@@ -78,8 +72,6 @@ data LambdaVars = LambdaVars
   , _lvFunctionMemory :: !Text
   , _lvHandlerName :: !Text
   }
-
-$(makeLenses ''LambdaVars)
 
 data LambdaEnv = LambdaEnv
   { _leManager :: !HC.Manager
@@ -110,8 +102,6 @@ data LambdaClient m = LambdaClient
   , _lcPostLambdaResponse :: !(PostLambdaResponse m)
   }
 
-$(makeLenses ''LambdaClient)
-
 type InitErrorCallback n = SomeException -> n LambdaError
 
 defaultInitErrorCallback :: Applicative n => InitErrorCallback n
@@ -126,8 +116,6 @@ data CallbackConfig n = CallbackConfig
   , _cbcInvokeErrorCallback :: !(InvokeErrorCallback n)
   , _cbcUncaughtErrorCallback :: !(UncaughtErrorCallback n)
   }
-
-$(makeLenses ''CallbackConfig)
 
 defaultCallbackConfig :: Applicative n => RunCallback n -> CallbackConfig n
 defaultCallbackConfig runCb = CallbackConfig runCb (\_ _ -> pure defaultLambdaError) (\_ -> pure ())
