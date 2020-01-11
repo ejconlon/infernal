@@ -5,8 +5,10 @@ license:             BSD3
 author:              "Eric Conlon"
 maintainer:          "ejconlon@gmail.com"
 copyright:           "(c) 2020 Eric Conlon"
+category:            AWS
+synopsis:            The Infernal Machine - An AWS Lambda Custom Runtime for Haskell
 
-description: Please see the README on GitHub at <https://github.com/ejconlon/infernal#readme>
+description: The Infernal Machine - An AWS Lambda Custom Runtime for Haskell
 
 dependencies:
 - base >= 4.12 && < 5
