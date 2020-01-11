@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 89a70c19aec3382cf980989974511d70f42bc9e23128ba67c4e14bfc4e4406aa
+-- hash: 688f605e05f1527ba9cac90e55db67d1c44cc9ff2fe7454e40331aa30d5ea75b
 
 name:           infernal
 version:        0.1.0
@@ -28,7 +28,7 @@ library
       Paths_infernal
   hs-source-dirs:
       src
-  default-extensions: ConstraintKinds DeriveFunctor DeriveFoldable DeriveGeneric DeriveTraversable DerivingStrategies DerivingVia GADTs GeneralizedNewtypeDeriving NoImplicitPrelude OverloadedStrings TemplateHaskell TypeFamilies
+  default-extensions: ConstraintKinds DeriveFunctor DeriveFoldable DeriveGeneric DeriveTraversable DerivingStrategies GeneralizedNewtypeDeriving NoImplicitPrelude OverloadedStrings TemplateHaskell
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -fno-warn-unused-top-binds
   build-depends:
       aeson >=1.4

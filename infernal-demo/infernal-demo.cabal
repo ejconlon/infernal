@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5237b64701f5e5dd43e30c056e2e6dc087678b914abbc7f32426a812c2d6c102
+-- hash: b35784e4ee628a87b05216185114f5e2bb0293c3a4ce37f3c1f6920e257a669a
 
 name:           infernal-demo
 version:        0.1.0
@@ -27,7 +27,7 @@ executable infernal-demo
       Paths_infernal_demo
   hs-source-dirs:
       app
-  default-extensions: ConstraintKinds DeriveFunctor DeriveFoldable DeriveGeneric DeriveTraversable DerivingStrategies DerivingVia GADTs GeneralizedNewtypeDeriving NoImplicitPrelude OverloadedStrings TemplateHaskell TypeFamilies
+  default-extensions: ConstraintKinds DeriveFunctor DeriveFoldable DeriveGeneric DeriveTraversable DerivingStrategies DerivingVia GeneralizedNewtypeDeriving NoImplicitPrelude OverloadedStrings TemplateHaskell
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -fno-warn-unused-top-binds -threaded -rtsopts -O2 -static -with-rtsopts=-N
   cc-options: -static
   ld-options: -static -pthread

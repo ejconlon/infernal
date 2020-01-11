@@ -32,13 +32,10 @@ default-extensions:
   - DeriveGeneric
   - DeriveTraversable
   - DerivingStrategies
-  - DerivingVia
-  - GADTs
   - GeneralizedNewtypeDeriving
   - NoImplicitPrelude
   - OverloadedStrings
   - TemplateHaskell
-  - TypeFamilies
 
 ghc-options:
 - -Wall

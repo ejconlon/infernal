@@ -1,9 +1,9 @@
 module Main where
 
 import Data.Aeson (eitherDecode, encode)
+import qualified Data.Text as Text
 import Infernal
 import Heart.App.SuperPrelude
-import qualified Data.Text as Text
 
 data DislikeNameError = DislikeNameError
   deriving stock (Eq, Show, Typeable)
@@ -32,6 +32,7 @@ main = do
     req <- decodeRequest lamReq
     let name = _reqName req
     logDebug ("Got name " <> name)
-    if name == "Oscar"
-      then throwM DislikeNameError
-      else pure (encode (Response ("Hello, " <> name)))
+    -- We'll throw an unformatted exception when we encounter the magic name "Throw" just to test things out.
+    case name of
+      "Throw" -> throwM DislikeNameError
+      _ -> pure (encode (Response ("Hello, " <> name)))

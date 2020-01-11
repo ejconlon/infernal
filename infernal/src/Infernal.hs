@@ -1,7 +1,7 @@
 module Infernal where
 
 import Control.Monad (forever, void)
-import Data.Aeson ((.=), encode, pairs)
+import Data.Aeson (encode, pairs, (.=))
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.CaseInsensitive as CI
 import Data.Maybe (isJust)
@@ -12,7 +12,7 @@ import qualified Network.HTTP.Client as HC
 import qualified Network.HTTP.Types as HT
 import System.Exit (ExitCode)
 import System.IO (BufferMode (LineBuffering), hSetBuffering, stderr, stdout)
--- import UnliftIO.Concurrent (forkIO)
+import Text.Read (readMaybe)
 import UnliftIO.Environment (getEnv)
 
 -- TODO This should go in heart-core, along with catch functions
@@ -32,7 +32,7 @@ data LambdaRequest = LambdaRequest
   { _lreqId :: !LambdaRequestId
   , _lreqTraceId :: !Text
   , _lreqFunctionArn :: !Text
-  , _lreqDeadlineMs :: !Text
+  , _lreqDeadlineMs :: !Int
   , _lreqBody :: !LBS.ByteString
   } deriving stock (Eq, Show)
 
@@ -52,6 +52,36 @@ instance ToJSON LambdaError where
 
 defaultLambdaError :: LambdaError
 defaultLambdaError = LambdaError "InternalError" "No information is available."
+
+data LambdaVars = LambdaVars
+  { _lvLogGroupName :: !Text
+  , _lvLogStreamName :: !Text
+  , _lvFunctionVersion :: !Text
+  , _lvFunctionName :: !Text
+  , _lvTaskRoot :: !Text
+  , _lvApiEndpoint :: !Text
+  , _lvFunctionMemory :: !Text
+  , _lvHandlerName :: !Text
+  }
+
+$(makeLenses ''LambdaVars)
+
+data LambdaEnv = LambdaEnv
+  { _leManager :: !HC.Manager
+  , _leVars :: !LambdaVars
+  , _leSimpleLog :: !SimpleLogAction
+  }
+
+$(makeLenses ''LambdaEnv)
+
+instance HasSimpleLog LambdaEnv where
+  simpleLogL = leSimpleLog
+
+class HasLambdaEnv env where
+  lambdaEnvL :: Lens' env LambdaEnv
+
+instance HasLambdaEnv LambdaEnv where
+  lambdaEnvL = id
 
 type GetLambdaRequest m = m LambdaRequest
 type PostLambdaInitError m = LambdaError -> m ()
@@ -124,7 +154,10 @@ handleInvokeError postErr unio invokeErrCb lamReq err = do
 guardInvokeError :: (MonadCatch m, WithSimpleLog env m) => PostLambdaInvokeError m -> UnliftIO n -> InvokeErrorCallback n -> LambdaRequest -> m () -> m ()
 guardInvokeError postErr unio invokeErrCb lamReq body = catchRethrowExitCode body (handleInvokeError postErr unio invokeErrCb lamReq)
 
-pollAndRespond :: (MonadCatch m, MonadUnliftIO m, WithSimpleLog env m) => LambdaClient m -> UnliftIO n -> CallbackConfig n -> m ()
+missedDeadlineError :: Int -> LambdaError
+missedDeadlineError deadlineMs = LambdaError "MissedDeadlineError" ("Missed adjusted deadline of " <> Text.pack (show deadlineMs) <> "ms.")
+
+pollAndRespond :: (MonadCatch m, WithSimpleLog env m) => LambdaClient m -> UnliftIO n -> CallbackConfig n -> m ()
 pollAndRespond client unio cbc = do
   let runCb = _cbcRunCallback cbc
       invokeErrCb = _cbcInvokeErrorCallback cbc
@@ -132,47 +165,22 @@ pollAndRespond client unio cbc = do
       postRep = _lcPostLambdaResponse client
   logDebug "Polling for request"
   lamReq <- _lcGetLambdaRequest client
-  let lamIdText = _unLambdaRequestId (_lreqId lamReq)
+  let lamReqId = _lreqId lamReq
+      lamIdText = _unLambdaRequestId lamReqId
   logDebug ("Servicing request id " <> lamIdText)
-  -- TODO enforce deadline
   guardInvokeError postErr unio invokeErrCb lamReq $ do
     lamRepBody <- unliftInto unio (runCb lamReq)
-    let lamReqId = _lreqId lamReq
     logDebug ("Posting response to request id " <> lamIdText)
     postRep lamReqId lamRepBody
     logDebug ("Finished request id " <> lamIdText)
 
-pollLoop :: (MonadCatch m, MonadUnliftIO m, WithSimpleLog env m) => LambdaClient m -> UnliftIO n -> CallbackConfig n -> m ()
+pollLoop :: (MonadCatch m, WithSimpleLog env m) => LambdaClient m -> UnliftIO n -> CallbackConfig n -> m ()
 pollLoop client unio cbc =
   let uncaughtErrCb = _cbcUncaughtErrorCallback cbc
   in forever $ catchRethrowExitCode (pollAndRespond client unio cbc) $ \err -> do
     logError "Handling uncaught error:"
     logException err
     unliftInto unio (uncaughtErrCb err)
-
-data LambdaVars = LambdaVars
-  { _lvLogGroupName :: !Text
-  , _lvLogStreamName :: !Text
-  , _lvFunctionVersion :: !Text
-  , _lvFunctionName :: !Text
-  , _lvTaskRoot :: !Text
-  , _lvApiEndpoint :: !Text
-  , _lvFunctionMemory :: !Text
-  , _lvHandlerName :: !Text
-  }
-
-$(makeLenses ''LambdaVars)
-
-data LambdaEnv = LambdaEnv
-  { _leManager :: !HC.Manager
-  , _leVars :: !LambdaVars
-  , _leSimpleLog :: !SimpleLogAction
-  }
-
-$(makeLenses ''LambdaEnv)
-
-instance HasSimpleLog LambdaEnv where
-  simpleLogL = leSimpleLog
 
 getEnvText :: (MonadThrow m, MonadIO m) => Text -> m Text
 getEnvText = fmap Text.pack . getEnv . Text.unpack
@@ -205,12 +213,6 @@ newLambdaEnv = do
   simpleLog <- view simpleLogL
   pure (LambdaEnv manager vars simpleLog)
 
-class HasLambdaEnv env where
-  lambdaEnvL :: Lens' env LambdaEnv
-
-instance HasLambdaEnv LambdaEnv where
-  lambdaEnvL = id
-
 type MonadLambdaImpl env m = (MonadIO m, MonadThrow m, MonadReader env m, HasLambdaEnv env)
 
 askApiEndpoint :: MonadLambdaImpl env m => m Text
@@ -242,6 +244,9 @@ initRequest suffix = do
 missingHeaderError :: Text -> LambdaError
 missingHeaderError name = LambdaError "MissingHeaderError" ("Missing header " <> name <> " in next invocation request.")
 
+invalidDeadlineError :: Text -> LambdaError
+invalidDeadlineError deadlineMsText = LambdaError "InvalidDeadlineError" ("Invalid value for deadline: " <> deadlineMsText)
+
 lookupHeader :: MonadThrow m => Text -> HT.ResponseHeaders -> m Text
 lookupHeader name headers =
   case lookup (CI.mk (encodeUtf8 name)) headers of
@@ -253,7 +258,10 @@ parseLambdaRequest headers body = do
   reqId <- lookupHeader "Lambda-Runtime-Aws-Request-Id" headers
   traceId <- lookupHeader "Lambda-Runtime-Trace-Id" headers
   functionArn <- lookupHeader "Lambda-Runtime-Invoked-Function-Arn" headers
-  deadlineMs <- lookupHeader "Lambda-Runtime-Deadline-Ms" headers
+  deadlineMsText <- lookupHeader "Lambda-Runtime-Deadline-Ms" headers
+  deadlineMs <- case readMaybe (Text.unpack deadlineMsText) of
+    Just value -> pure value
+    Nothing -> throwM (invalidDeadlineError deadlineMsText)
   pure $ LambdaRequest
     { _lreqId = LambdaRequestId reqId
     , _lreqTraceId = traceId
@@ -299,7 +307,7 @@ lambdaClientImpl = LambdaClient
 httpManagerSettings :: HC.ManagerSettings
 httpManagerSettings = HC.defaultManagerSettings { HC.managerResponseTimeout = HC.responseTimeoutNone }
 
-mkMain :: (MonadCatch m, MonadUnliftIO m, WithSimpleLog env m) => UnliftIO n -> InitErrorCallback n -> n (CallbackConfig n) -> m ()
+mkMain :: (MonadCatch m, WithSimpleLog env m) => UnliftIO n -> InitErrorCallback n -> n (CallbackConfig n) -> m ()
 mkMain unio initErrCb cbcInit = do
   logDebug "Initializing lambda environment"
   lambdaEnv <- newLambdaEnv
