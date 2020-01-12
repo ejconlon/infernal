@@ -10,4 +10,4 @@ docker:
 extra-deps:
 - heart-core-0.1.1
 - heart-app-0.1.1
-- ../infernal
+- ../infernal-libs/infernal
