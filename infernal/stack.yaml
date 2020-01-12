@@ -1,7 +1,7 @@
 resolver: lts-14.20
 
 packages:
-- .
+- infernal
 
 extra-deps:
 - heart-core-0.1.1
