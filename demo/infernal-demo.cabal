@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 14708f4f08146e04b04451e859071fc21ec474b601b49539c1b487f7fd238566
+-- hash: 215ef2d4e4d48d0c92abd54a7e29023f40714adf5c96299df930f0fa07eaee0b
 
 name:           infernal-demo
-version:        0.2.0
+version:        0.3.0
 description:    Please see the README on GitHub at <https://github.com/ejconlon/infernal#readme>
 homepage:       https://github.com/ejconlon/infernal#readme
 bug-reports:    https://github.com/ejconlon/infernal/issues

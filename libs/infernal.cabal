@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 4555b1c96c7aefe45f3997886edccdddeef925ef5d1f57bbb09d02fb6f57f19c
+-- hash: a5e5af8e888606c56383340240a1e597cd6d9b3925850095b0ccd08074d9b07c
 
 name:           infernal
-version:        0.2.0
+version:        0.3.0
 synopsis:       The Infernal Machine - An AWS Lambda Custom Runtime for Haskell
 description:    Please see the README on GitHub at <https://github.com/ejconlon/infernal#readme>
 category:       AWS
