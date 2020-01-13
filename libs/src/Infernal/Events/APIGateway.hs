@@ -1,4 +1,14 @@
--- | DOCME
+{-|
+Definitions for API Gateway proxy objects. Where possible, information that maps directly
+to 'Network.HTTP.Types' objects uses that representation. Otherwise a 'Text' representation
+is used as 'Data.Aeson' natively provides.
+
+See <https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html AWS docs> for
+information on these datatypes.
+
+These definitions are taken in part from <serverless-haskell https://hackage.haskell.org/package/serverless-haskell>.
+Attribution and license information are present in the README.
+-}
 module Infernal.Events.APIGateway
   ( APIGatewayProxyRequest (..)
   , APIGatewayProxyResponse (..)
@@ -25,7 +35,7 @@ fromAWSHeaders :: HashMap Text Text -> HT.RequestHeaders
 fromAWSHeaders = fmap toHeader . HashMap.toList where
   toHeader = bimap (CI.mk . encodeUtf8) encodeUtf8
 
--- | DOCME
+-- | An API Gateway proxy request
 data APIGatewayProxyRequest = APIGatewayProxyRequest
   { _agprqResource              :: !Text
   , _agprqPath                  :: !ByteString
@@ -50,7 +60,7 @@ instance FromJSON APIGatewayProxyRequest where
       <*> o .:? "stageVariables" .!= HashMap.empty
       <*> (fmap encodeUtf8 <$> o .:? "body")
 
--- | DOCME
+-- | An API Gateway proxy response
 data APIGatewayProxyResponse = APIGatewayProxyResponse
   { _agprsStatusCode :: !Int
   , _agprsHeaders    :: !HT.ResponseHeaders

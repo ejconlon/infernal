@@ -55,7 +55,7 @@ data LambdaRequest = LambdaRequest
   , _lreqBody :: !LBS.ByteString  -- ^ The unparsed request body. Typically you will 'Data.Aeson.decode' this.
   } deriving stock (Eq, Show)
 
--- | DOCME
+-- | A response to the 'LambdaRequest', typically as encoded JSON.
 newtype LambdaResponse = LambdaResponse
   { _unLambdaResponse :: LBS.ByteString
   } deriving (Eq, Show, Ord, IsString, Hashable)
@@ -349,11 +349,11 @@ unliftRIO env = liftIO (runRIO env askUnliftIO)
 badRequestError :: Text -> LambdaError
 badRequestError reason = LambdaError "BadRequestError" ("Bad request: " <> reason)
 
--- | DOCME
+-- | Decodes a request with 'FromJSON' or throws a 'LambdaError' (@BadRequestError@).
 decodeRequest :: (MonadThrow m, FromJSON a) => LambdaRequest -> m a
 decodeRequest = either (throwM . badRequestError . Text.pack) pure . eitherDecode . _lreqBody
 
--- | DOCME
+-- | Encodes a response with 'ToJSON'. (Mostly here to save you an Aeson import.)
 encodeResponse :: ToJSON a => a -> LambdaResponse
 encodeResponse = LambdaResponse . encode
 
