@@ -6,14 +6,10 @@ build:
 clean:
 	stack clean --docker
 
-.PHONY: function
-function: build
-	rm -rf .build
-	mkdir .build
-	cp `stack --docker path --local-install-root`/bin/infernal-simple-demo .build/bootstrap
-	cd .build && ls -lh bootstrap && zip function.zip bootstrap && rm bootstrap
-	unzip -l .build/function.zip
+.PHONY: simple-function
+simple-function: build
+	./function.sh simple
 
 .PHONY: integration-test
-integration-test: function
+integration-test: simple-function
 	./sam/test.sh

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Test SAM invocations against expected responses
+
 set -eu
 
 cd "$(dirname "${BASH_SOURCE[0]}")"

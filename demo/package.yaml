@@ -37,7 +37,7 @@ ghc-options:
 executables:
   infernal-simple-demo:
     main:                Main.hs
-    source-dirs:         app
+    source-dirs:         simple-app
     ghc-options:
       - -threaded
       - -rtsopts
