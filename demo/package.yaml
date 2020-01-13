@@ -35,7 +35,7 @@ ghc-options:
 - -fno-warn-unused-top-binds
 
 executables:
-  infernal-demo:
+  infernal-simple-demo:
     main:                Main.hs
     source-dirs:         app
     ghc-options:

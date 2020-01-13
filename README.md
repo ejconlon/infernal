@@ -16,7 +16,7 @@ The Infernal Machine - An AWS Lambda Custom Runtime for Haskell
 ## Development
 
 The `libs` subdir has the library, and `demo` has a small example application. They are separate `stack` projects because the demo
-needs to be built with Docker on OSX. See the `Brewfile` for test deps on OSX. Basically, if you have `stack`, `docker`, `upx`, and `aws-sam-cli`
+needs to be built with Docker on OSX. See the `Brewfile` for test deps on OSX. Basically, if you have `stack`, `docker`, and `aws-sam-cli`
 installed, you can run `make integration-test` to check a few cases.
 
 ## Prior work

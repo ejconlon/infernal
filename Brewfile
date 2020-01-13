@@ -1,5 +1,4 @@
 tap "aws/tap"
 brew "aws-sam-cli"
 brew "haskell-stack"
-brew "upx"
 cask "docker"

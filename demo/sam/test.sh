@@ -1,13 +1,11 @@
 #!/bin/bash
 
-# Tests
-
 set -eu
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-if [ ! -f ../demo/.build/function.zip ]; then
-  echo "Please 'make build' infernal-demo first."
+if [ ! -f ../.build/function.zip ]; then
+  echo "Please 'make build' infernal-simple-demo first."
   exit 1
 fi
 
