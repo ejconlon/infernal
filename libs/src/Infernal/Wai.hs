@@ -11,9 +11,10 @@ import Control.Concurrent.MVar (newEmptyMVar, putMVar, takeMVar)
 import Data.Binary.Builder (Builder, toLazyByteString)
 import qualified Data.ByteString as ByteString
 import Data.ByteString.Lazy (toStrict)
-import Data.IORef (modifyIORef, newIORef, readIORef)
+import Data.IORef (modifyIORef', newIORef, readIORef)
 import qualified Data.Text as Text
 import Data.Text.Encoding (decodeUtf8)
+import Heart.App.Logging (WithSimpleLog, logDebug)
 import Heart.Core.Prelude
 import Infernal (RunCallback, decodeRequest, encodeResponse, runSimpleLambda)
 import Infernal.Events.APIGateway (APIGatewayProxyRequest (..), APIGatewayProxyResponse (..))
@@ -26,7 +27,7 @@ adaptRequest proxyReq =
   defaultRequest
   { requestMethod = _agprqHttpMethod proxyReq
   , rawPathInfo = _agprqPath proxyReq
-  , pathInfo = Text.split (=='/') (decodeUtf8 (_agprqPath proxyReq))
+  , pathInfo = dropWhile Text.null (Text.split (=='/') (decodeUtf8 (_agprqPath proxyReq)))
   , queryString = _agprqQueryStringParameters proxyReq
   , requestHeaders = _agprqHeaders proxyReq
   , requestBody = maybe empty pure (_agprqBody proxyReq)
@@ -34,10 +35,9 @@ adaptRequest proxyReq =
 
 consumeStream :: StreamingBody -> IO Builder
 consumeStream sb = do
-  m <- newEmptyMVar
   r <- newIORef mempty
-  sb (modifyIORef r . flip mappend) (readIORef r >>= putMVar m)
-  takeMVar m
+  sb (modifyIORef' r . flip mappend) (pure ())
+  readIORef r
 
 -- | DOCME
 adaptResponse :: MonadIO n => Response -> n APIGatewayProxyResponse
@@ -55,15 +55,22 @@ adaptResponse rep = do
 adaptApplication :: MonadIO n => Application -> APIGatewayProxyRequest -> n APIGatewayProxyResponse
 adaptApplication app proxyReq = do
   v <- liftIO newEmptyMVar
-  _ <- liftIO (app (adaptRequest proxyReq) (\res -> adaptResponse res >>= putMVar v >> pure ResponseReceived))
+  let req = adaptRequest proxyReq
+  _ <- liftIO $ app req $ \res -> do
+    proxyRes <- adaptResponse res
+    putMVar v proxyRes
+    pure ResponseReceived
   liftIO (takeMVar v)
 
 -- | DOCME
-applicationCallback :: (MonadThrow n, MonadIO n) => Application -> RunCallback n
+applicationCallback :: (MonadThrow n, WithSimpleLog env n) => Application -> RunCallback n
 applicationCallback app lamReq = do
   proxyReq <- decodeRequest lamReq
+  logDebug ("Servicing proxy request " <> decodeUtf8 (_agprqHttpMethod proxyReq) <> " " <> decodeUtf8 (_agprqPath proxyReq))
   proxyRep <- adaptApplication app proxyReq
-  pure (encodeResponse proxyRep)
+  logDebug ("Responding with status " <> Text.pack (show (_agprsStatusCode proxyRep)))
+  let lamRep = encodeResponse proxyRep
+  pure lamRep
 
 -- | DOCME
 runSimpleWaiLambda :: Application -> IO ()
