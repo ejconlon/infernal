@@ -6,7 +6,7 @@ Resources:
   InfernalDemoFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../infernal-demo/.build/function.zip
+      CodeUri: ../demo/.build/function.zip
       Handler: my-handler
       Runtime: provided
       Events:

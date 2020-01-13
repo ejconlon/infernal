@@ -4,7 +4,7 @@ The Infernal Machine - An AWS Lambda Custom Runtime for Haskell
 
 ## How to write your own Lambda
 
-* See `Makefile`, `stack.yaml`, and `package.yaml` in `infernal-demo` for the right options to build your program
+* See `Makefile`, `stack.yaml`, and `package.yaml` in `demo` for the right options to build your program
   * statically-linked
   * in a Docker container
   * zipped the right way
@@ -15,7 +15,7 @@ The Infernal Machine - An AWS Lambda Custom Runtime for Haskell
 
 ## Development
 
-The `infernal` subdir has the library, and `infernal-demo` has a small example application. They are separate `stack` projects because the demo
+The `libs` subdir has the library, and `demo` has a small example application. They are separate `stack` projects because the demo
 needs to be built with Docker on OSX. See the `Brewfile` for test deps on OSX. Basically, if you have `stack`, `docker`, `upx`, and `aws-sam-cli`
 installed, you can run `make integration-test` to check a few cases.
 

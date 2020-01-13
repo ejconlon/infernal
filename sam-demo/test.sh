@@ -6,7 +6,7 @@ set -eu
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-if [ ! -f ../infernal-demo/.build/function.zip ]; then
+if [ ! -f ../demo/.build/function.zip ]; then
   echo "Please 'make build' infernal-demo first."
   exit 1
 fi

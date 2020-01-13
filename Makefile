@@ -1,5 +1,5 @@
 integration-test:
-	cd infernal-demo && make function
+	cd demo && make function
 	./sam-demo/test.sh
 
 update-licenses:
