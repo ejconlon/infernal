@@ -14,7 +14,7 @@ integration-test-simple: build
 .PHONY: integration-test-wai
 integration-test-wai: build
 	./build-function.sh wai
-	# ./sam/test.sh wai InfernalWaiDemoFunction
+	./sam/test.sh wai InfernalWaiDemoFunction
 
 .PHONY: integration-test
 integration-test: integration-test-simple integration-test-wai

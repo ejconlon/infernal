@@ -14,13 +14,13 @@ if [ ! -f ../.build/${VARIANT}-function.zip ]; then
   exit 1
 fi
 
-for CASE in ok bad throw
+for CASE in `ls ${VARIANT}`
 do
   echo "Testing case ${CASE}:"
-  EVENT="events/${CASE}-request.json"
-  EXPECTED="expected/${CASE}-response.json"
-  ACTUAL="/tmp/${CASE}-repsonse.json"
-  sam local invoke ${FUNCTION} --event ${EVENT} > ${ACTUAL}
+  REQUEST="${VARIANT}/${CASE}/request.json"
+  EXPECTED="${VARIANT}/${CASE}/response.json"
+  ACTUAL="/tmp/${VARIANT}-${CASE}-response.json"
+  sam local invoke ${FUNCTION} --event ${REQUEST} > ${ACTUAL}
   diff <(tail -n1 ${ACTUAL}) <(cat ${EXPECTED})
   echo "=============================="
 done
