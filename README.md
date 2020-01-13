@@ -25,7 +25,7 @@ installed, you can run `make integration-test` to check a few cases.
 
 ## Prior work
 
-Thanks to Nikita Tchayka and Theam for [aws-lambda-haskell-runtime](http://hackage.haskell.org/package/aws-lambda-haskell-runtime).
+Thanks to Nick Tchayka and Theam for [aws-lambda-haskell-runtime](http://hackage.haskell.org/package/aws-lambda-haskell-runtime).
 Between reading their implementation and the [official documentation](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-custom.html#runtimes-custom-build)
 it was pretty easy to get this working. `aws-lambda-haskell-runtime` is a great library but I had trouble combining the `TemplateHaskell` entrypoint
 with some custom startup logic.
