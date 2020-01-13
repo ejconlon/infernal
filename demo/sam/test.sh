@@ -6,8 +6,11 @@ set -eu
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-if [ ! -f ../.build/function.zip ]; then
-  echo "Please 'make build' infernal-simple-demo first."
+VARIANT="$1"
+FUNCTION="$2"
+
+if [ ! -f ../.build/${VARIANT}-function.zip ]; then
+  echo "Please run `make build && build-function.sh ${VARIANT}`."
   exit 1
 fi
 
@@ -17,7 +20,7 @@ do
   EVENT="events/${CASE}-request.json"
   EXPECTED="expected/${CASE}-response.json"
   ACTUAL="/tmp/${CASE}-repsonse.json"
-  sam local invoke --event ${EVENT} > ${ACTUAL}
+  sam local invoke ${FUNCTION} --event ${EVENT} > ${ACTUAL}
   diff <(tail -n1 ${ACTUAL}) <(cat ${EXPECTED})
   echo "=============================="
 done

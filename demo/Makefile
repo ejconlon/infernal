@@ -6,10 +6,15 @@ build:
 clean:
 	stack clean --docker
 
-.PHONY: simple-function
-simple-function: build
-	./function.sh simple
+.PHONY: integration-test-simple
+integration-test-simple: build
+	./build-function.sh simple
+	./sam/test.sh simple InfernalSimpleDemoFunction
+
+.PHONY: integration-test-wai
+integration-test-wai: build
+	./build-function.sh wai
+	# ./sam/test.sh wai InfernalWaiDemoFunction
 
 .PHONY: integration-test
-integration-test: simple-function
-	./sam/test.sh
+integration-test: integration-test-simple integration-test-wai

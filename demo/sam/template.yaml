@@ -1,11 +1,18 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: infernal-simple-demo
+Description: infernal-demo
 
 Resources:
-  InfernalDemoFunction:
+  InfernalSimpleDemoFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../.build/function.zip
+      CodeUri: ../.build/simple-function.zip
+      Handler: not-used
+      Runtime: provided
+
+  InfernalWaiDemoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../.build/wai-function.zip
       Handler: not-used
       Runtime: provided
