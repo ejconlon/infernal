@@ -1,3 +1,4 @@
+-- | DOCME
 module Infernal.Events.APIGateway
   ( APIGatewayProxyRequest (..)
   , APIGatewayProxyResponse (..)
@@ -24,6 +25,7 @@ fromAWSHeaders :: HashMap Text Text -> HT.RequestHeaders
 fromAWSHeaders = fmap toHeader . HashMap.toList where
   toHeader = bimap (CI.mk . encodeUtf8) encodeUtf8
 
+-- | DOCME
 data APIGatewayProxyRequest = APIGatewayProxyRequest
   { _agprqResource              :: !Text
   , _agprqPath                  :: !ByteString
@@ -48,6 +50,7 @@ instance FromJSON APIGatewayProxyRequest where
       <*> o .:? "stageVariables" .!= HashMap.empty
       <*> (fmap encodeUtf8 <$> o .:? "body")
 
+-- | DOCME
 data APIGatewayProxyResponse = APIGatewayProxyResponse
   { _agprsStatusCode :: !Int
   , _agprsHeaders    :: !HT.ResponseHeaders

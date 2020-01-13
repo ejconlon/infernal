@@ -1,7 +1,10 @@
+-- | DOCME
 module Infernal.Wai
   ( adaptApplication
   , adaptRequest
   , adaptResponse
+  , applicationCallback
+  , runSimpleLambda
   ) where
 
 import Control.Concurrent.MVar (newEmptyMVar, putMVar, takeMVar)
@@ -12,10 +15,12 @@ import Data.IORef (modifyIORef, newIORef, readIORef)
 import qualified Data.Text as Text
 import Data.Text.Encoding (decodeUtf8)
 import Heart.Core.Prelude
+import Infernal (RunCallback, decodeRequest, encodeResponse, runSimpleLambda)
 import Infernal.Events.APIGateway (APIGatewayProxyRequest (..), APIGatewayProxyResponse (..))
 import Network.Wai (Application, Response, StreamingBody, defaultRequest, responseToStream)
 import Network.Wai.Internal (Request (..), ResponseReceived (..))
 
+-- | DOCME
 adaptRequest :: APIGatewayProxyRequest -> Request
 adaptRequest proxyReq =
   defaultRequest
@@ -34,6 +39,7 @@ consumeStream sb = do
   sb (modifyIORef r . flip mappend) (readIORef r >>= putMVar m)
   takeMVar m
 
+-- | DOCME
 adaptResponse :: MonadIO n => Response -> n APIGatewayProxyResponse
 adaptResponse rep = do
   let (repStatus, repHeaders, repBodyAction) = responseToStream rep
@@ -45,8 +51,20 @@ adaptResponse rep = do
     , _agprsBody = if ByteString.null body then Nothing else Just body
     }
 
+-- | DOCME
 adaptApplication :: MonadIO n => Application -> APIGatewayProxyRequest -> n APIGatewayProxyResponse
 adaptApplication app proxyReq = do
   v <- liftIO newEmptyMVar
   _ <- liftIO (app (adaptRequest proxyReq) (\res -> adaptResponse res >>= putMVar v >> pure ResponseReceived))
   liftIO (takeMVar v)
+
+-- | DOCME
+applicationCallback :: (MonadThrow n, MonadIO n) => Application -> RunCallback n
+applicationCallback app lamReq = do
+  proxyReq <- decodeRequest lamReq
+  proxyRep <- adaptApplication app proxyReq
+  pure (encodeResponse proxyRep)
+
+-- | DOCME
+runSimpleWaiLambda :: Application -> IO ()
+runSimpleWaiLambda = runSimpleLambda . applicationCallback

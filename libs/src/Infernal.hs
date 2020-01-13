@@ -10,18 +10,21 @@ module Infernal
   , LambdaError (..)
   , LambdaRequestId (..)
   , LambdaRequest (..)
+  , LambdaResponse (..)
   , LambdaVars (..)
   , RunCallback
   , UncaughtErrorCallback
+  , decodeRequest
   , defaultCallbackConfig
   , defaultLambdaError
   , defaultInitErrorCallback
+  , encodeResponse
   , runLambda
   , runSimpleLambda
   ) where
 
 import Control.Monad (forever, void)
-import Data.Aeson (encode, pairs, (.=))
+import Data.Aeson (eitherDecode, encode, pairs, (.=))
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.CaseInsensitive as CI
 import Data.Maybe (isJust)
@@ -52,9 +55,14 @@ data LambdaRequest = LambdaRequest
   , _lreqBody :: !LBS.ByteString  -- ^ The unparsed request body. Typically you will 'Data.Aeson.decode' this.
   } deriving stock (Eq, Show)
 
+-- | DOCME
+newtype LambdaResponse = LambdaResponse
+  { _unLambdaResponse :: LBS.ByteString
+  } deriving (Eq, Show, Ord, IsString, Hashable)
+
 -- | An error formatted to propagate to AWS (<https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html#runtimes-api-invokeerror docs>).
---   Note that this is an 'Exception' so you can throw it to short-circuit processing and report useful information. If you throw anything
---   else a 'defaultLambdaError' will be reported with no useful information.
+--   Note that this is an 'Exception' so you can throw it to short-circuit processing and report useful information. By default, if you throw
+--   anything else a 'defaultLambdaError' will be reported with no useful information.
 data LambdaError = LambdaError
   { _lerrErrorType :: !Text     -- ^ The type of error that occurred. In this library is is often @StartCase@-formated.
   , _lerrErrorMessage :: !Text  -- ^ A useful error message
@@ -102,7 +110,7 @@ instance HasLambdaEnv LambdaEnv where
 type GetLambdaRequest m = m LambdaRequest
 type PostLambdaInitError m = LambdaError -> m ()
 type PostLambdaInvokeError m = LambdaRequestId -> LambdaError -> m ()
-type PostLambdaResponse m = LambdaRequestId -> LBS.ByteString -> m ()
+type PostLambdaResponse m = LambdaRequestId -> LambdaResponse -> m ()
 
 data LambdaClient m = LambdaClient
   { _lcGetLambdaRequest :: !(GetLambdaRequest m)
@@ -123,7 +131,7 @@ defaultInitErrorCallback _ = pure defaultLambdaError
 --   callbacks will process it. Most importantly, 'LambdaError' will propagate a formatted error to AWS, and 'System.Exit.ExitCode' will halt the program. Except for 'System.Exit.ExitCode',
 --   throwing exceptions here will not terminate the main loop (see 'runLambda'). Note that the AWS custom runtime loop implemented in this library is single-threaded (as required - we must finish an invocation
 --   before fetching the next) but you are free to spawn threads in your callback.
-type RunCallback n = LambdaRequest -> n LBS.ByteString
+type RunCallback n = LambdaRequest -> n LambdaResponse
 
 -- | Error mapper for invocation errors. The result will be @POST@ed to the invocation error endpoint (<https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html#runtimes-api-invokeerror docs>).
 --   Exceptions of type 'LambdaError' will not trigger this callback, and 'System.Exit.ExitCode' will be rethrown after it executes.
@@ -321,7 +329,7 @@ postLambdaInvokeErrorImpl :: MonadLambdaImpl env m => PostLambdaInvokeError m
 postLambdaInvokeErrorImpl lamReqId = postRequest ["invocation", _unLambdaRequestId lamReqId, "error"] . encode
 
 postLambdaResponseImpl :: MonadLambdaImpl env m => PostLambdaResponse m
-postLambdaResponseImpl lamReqId = postRequest ["invocation", _unLambdaRequestId lamReqId, "response"]
+postLambdaResponseImpl lamReqId = postRequest ["invocation", _unLambdaRequestId lamReqId, "response"] . _unLambdaResponse
 
 lambdaClientImpl :: MonadLambdaImpl env m => LambdaClient m
 lambdaClientImpl = LambdaClient
@@ -337,6 +345,17 @@ httpManagerSettings = HC.defaultManagerSettings { HC.managerResponseTimeout = HC
 -- TODO This should go in heart-core, along with catch functions
 unliftRIO :: MonadIO m => env -> m (UnliftIO (RIO env))
 unliftRIO env = liftIO (runRIO env askUnliftIO)
+
+badRequestError :: Text -> LambdaError
+badRequestError reason = LambdaError "BadRequestError" ("Bad request: " <> reason)
+
+-- | DOCME
+decodeRequest :: (MonadThrow m, FromJSON a) => LambdaRequest -> m a
+decodeRequest = either (throwM . badRequestError . Text.pack) pure . eitherDecode . _lreqBody
+
+-- | DOCME
+encodeResponse :: ToJSON a => a -> LambdaResponse
+encodeResponse = LambdaResponse . encode
 
 -- | The full-powered entrypoint underlying 'runSimpleLambda' that allows you to use any 'UnliftIO'-capable monad for your callbacks.
 --   This runs the main loop of our AWS Lambda Custom Runtime to fetch invocations, process them, and report errors or results.

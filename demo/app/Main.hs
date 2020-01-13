@@ -1,8 +1,6 @@
 module Main where
 
-import Data.Aeson (eitherDecode, encode)
-import qualified Data.Text as Text
-import Infernal
+import Infernal (decodeRequest, encodeResponse, runSimpleLambda)
 import Heart.App.Logging (logDebug)
 import Heart.Core.Aeson (AesonRecord (..))
 import Heart.Core.Prelude
@@ -21,12 +19,6 @@ data Response = Response
   } deriving stock (Eq, Show, Generic)
     deriving ToJSON via (AesonRecord Response)
 
-badRequestError :: Text -> LambdaError
-badRequestError reason = LambdaError "BadRequestError" ("Bad request: " <> reason)
-
-decodeRequest :: MonadThrow m => LambdaRequest -> m Request
-decodeRequest = either (throwM . badRequestError . Text.pack) pure . eitherDecode . _lreqBody
-
 main :: IO ()
 main = do
   runSimpleLambda $ \lamReq -> do
@@ -37,4 +29,4 @@ main = do
     -- We'll throw an unformatted exception when we encounter the magic name "Throw" just to test things out.
     case name of
       "Throw" -> throwM DislikeNameError
-      _ -> pure (encode (Response ("Hello, " <> name)))
+      _ -> pure (encodeResponse (Response ("Hello, " <> name)))
