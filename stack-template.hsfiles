@@ -1,0 +1,182 @@
+{-# START_FILE package.yaml #-}
+name:                {{name}}
+version:             0.1.0
+github:              "{{github-username}}{{^github-username}}githubuser{{/github-username}}/{{name}}"
+license:             BSD3
+author:              "{{author-name}}{{^author-name}}Author name here{{/author-name}}"
+maintainer:          "{{author-email}}{{^author-email}}example@example.com{{/author-email}}"
+copyright:           "{{copyright}}{{^copyright}}{{year}}{{^year}}2020{{/year}} {{author-name}}{{^author-name}}Author name here{{/author-name}}{{/copyright}}"
+
+description:         Please see the README on GitHub at <https://github.com/{{github-username}}{{^github-username}}githubuser{{/github-username}}/{{name}}#readme>
+
+dependencies:
+- base >=4.12 && <5
+
+default-extensions:
+  DeriveGeneric
+  OverloadedStrings
+
+executables:
+  bootstrap:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -O2
+    - -static
+    - -with-rtsopts=-N
+    cc-options: -static
+    ld-options: -static -pthread
+    dependencies:
+    - aeson >=1.4
+    - infernal >=0.3
+    - text >=1.2
+
+{-# START_FILE Makefile #-}
+.PHONY: clean
+clean:
+  stack clean --docker
+
+.PHONY: build
+build:
+  stack build --docker
+
+.PHONY: function
+function: build
+  bash ./build-function.sh
+
+.PHONY: integration-test
+integration-test: function
+  bash ./sam/test.sh
+
+{-# START_FILE build-function.sh #-}
+  #!/bin/bash
+
+  set -eux
+
+	mkdir -p .build
+	rm -f .build/function.zip
+	cp `stack --docker path --local-install-root`/bin/bootstrap .build
+	cd .build && zip function.zip bootstrap && rm bootstrap && unzip -l function.zip
+
+{-# START_FILE app/Main.hs #-}
+module Main where
+
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Text (Text)
+import GHC.Generics (Generic)
+import Infernal (decodeRequest, encodeResponse, runSimpleMain)
+
+data Request = Request
+  { _reqName :: !Text
+  } deriving (Eq, Show, Generic)
+
+instance FromJSON Request
+
+data Response = Response
+  { _repGreeting :: !Text
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON Response
+
+handleRequest :: Request -> Response
+handleRequest (Request name) = Response ("Hello, " <> name)
+
+main :: IO ()
+main = runSimpleLambda $ \lamReq -> do
+  request <- decodeRequest lamReq
+  let response = handleResponse request
+      lamRep = encodeResponse response
+  pure lamRep
+
+{-# START_FILE README.md #-}
+# {{name}}
+
+This project requires `stack`, `docker`, and `aws-sam-cli`.
+
+    # Build the lambda function
+    make function
+
+    # Test with aws-sam-cli
+    make integration-test
+
+{-# START_FILE LICENSE #-}
+Copyright {{author-name}}{{^author-name}}Author name here{{/author-name}} (c) {{year}}{{^year}}2020{{/year}}
+
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of {{author-name}}{{^author-name}}Author name here{{/author-name}} nor the names of other
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+{-# START_FILE .gitignore #-}
+.build/
+.stack-work/
+{{name}}.cabal
+*~
+
+{-# START_FILE sam/template.yaml #-}
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: {{name}}
+
+Resources:
+  Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../.build/function.zip
+      Handler: not-used
+      Runtime: provided
+
+{-# START_FILE sam/cases/ok/request.json #-}
+{"name":"Kermit"}
+
+{-# START_FILE sam/cases/ok/response.json #-}
+{"greeting":"Hello, Kermit"}
+
+{-# START_FILE sam/test.sh #-}
+#!/bin/bash
+
+set -eux
+
+if [ ! -f .build/function.zip ]; then
+  echo "Please run `make function`."
+  exit 1
+fi
+
+for CASE in `ls sam/cases`
+do
+  echo "Testing case ${CASE}:"
+  REQUEST="sam/cases/${CASE}/request.json"
+  EXPECTED="sam/cases/${CASE}/response.json"
+  ACTUAL="/tmp/sam-${CASE}-response.json"
+  sam local invoke --event ${REQUEST} > ${ACTUAL}
+  diff <(tail -n1 ${ACTUAL}) <(cat ${EXPECTED})
+  echo "=============================="
+done
+
+echo "All tests passed."
