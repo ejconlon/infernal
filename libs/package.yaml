@@ -50,6 +50,7 @@ ghc-options:
 - -Wpartial-fields
 - -Wredundant-constraints
 - -fno-warn-unused-top-binds
+- -fno-warn-warnings-deprecations
 
 library:
   source-dirs: src

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 4ab0e10451e82405d58538179329227b563bbfed77824227cd8020b2bc301df6
+-- hash: 4555b1c96c7aefe45f3997886edccdddeef925ef5d1f57bbb09d02fb6f57f19c
 
 name:           infernal
 version:        0.2.0
@@ -27,12 +27,14 @@ source-repository head
 library
   exposed-modules:
       Infernal
+      Infernal.Events.APIGateway
+      Infernal.Wai
   other-modules:
       Paths_infernal
   hs-source-dirs:
       src
   default-extensions: ConstraintKinds DeriveFunctor DeriveFoldable DeriveGeneric DeriveTraversable DerivingStrategies GeneralizedNewtypeDeriving NoImplicitPrelude OverloadedStrings TemplateHaskell
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -fno-warn-unused-top-binds
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -fno-warn-unused-top-binds -fno-warn-warnings-deprecations
   build-depends:
       aeson >=1.4
     , base >=4.12 && <5
