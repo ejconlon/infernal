@@ -2,6 +2,10 @@
 
 The Infernal Machine - An AWS Lambda Custom Runtime for Haskell
 
+Since AWS released custom runtimes, you don't need to play any dirty tricks to get your Haskell programs running on AWS Lambda.
+Just call an `infernal` entrypoint in your `main` function, statically link your binary, and zip it up right. If you want to
+use your Lambda to serve API Gateway requests with an existing WAI app, there's a wrapper for that too.
+
 ## How to write your own Lambda
 
 * See `Makefile`, `stack.yaml`, and `package.yaml` in `demo` for the right options to build your program
@@ -10,7 +14,7 @@ The Infernal Machine - An AWS Lambda Custom Runtime for Haskell
   * zipped the right way
   * with some deps temporarily not in Stackage
 * Import `Infernal` in your `Main` module and use `runSimpleLambda` to run your handler
-* See `sam-test` and root `Makefile` if you want to use `aws-sam-cli` to test your program locally
+* See `demo/sam/test.sh` if you want to use `aws-sam-cli` to test your program locally
 * Deploy to AWS with your tool of choice (Serverless, Terraform + awscli, AWS console, etc)
 
 ## Development
@@ -37,5 +41,4 @@ You can find copies of both licenses in the `licenses` directory.
 * Get all deps into stackage (heart-core, heart-app)
 * Set up CI
 * Provide a stack template
-* Add APIGateway and other standard events
-* Add wrapper to serve existing WAI Applications with APIGateway
+* Add other standard events
