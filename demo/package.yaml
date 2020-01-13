@@ -50,3 +50,19 @@ executables:
     - infernal
     - heart-app >=0.1.1
     - heart-core >=0.1.1
+
+  infernal-wai-demo:
+    main:                Main.hs
+    source-dirs:         wai-app
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -O2
+      - -static
+      - -with-rtsopts=-N
+    cc-options: -static
+    ld-options: -static -pthread
+    dependencies:
+    - infernal
+    - heart-core >=0.1.1
+    - scotty >=0.11

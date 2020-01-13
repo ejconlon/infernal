@@ -4,7 +4,7 @@ module Infernal.Wai
   , adaptRequest
   , adaptResponse
   , applicationCallback
-  , runSimpleLambda
+  , runSimpleWaiLambda
   ) where
 
 import Control.Concurrent.MVar (newEmptyMVar, putMVar, takeMVar)

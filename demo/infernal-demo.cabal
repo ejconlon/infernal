@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: be9efadf5ad40a3ac5636281b0f40a074ac4618c1380546c0f38dbc2e2491ad3
+-- hash: 14708f4f08146e04b04451e859071fc21ec474b601b49539c1b487f7fd238566
 
 name:           infernal-demo
 version:        0.2.0
@@ -36,4 +36,21 @@ executable infernal-simple-demo
     , heart-app >=0.1.1
     , heart-core >=0.1.1
     , infernal
+  default-language: Haskell2010
+
+executable infernal-wai-demo
+  main-is: Main.hs
+  other-modules:
+      Paths_infernal_demo
+  hs-source-dirs:
+      wai-app
+  default-extensions: ConstraintKinds DeriveFunctor DeriveFoldable DeriveGeneric DeriveTraversable DerivingStrategies DerivingVia GeneralizedNewtypeDeriving NoImplicitPrelude OverloadedStrings TemplateHaskell
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -fno-warn-unused-top-binds -threaded -rtsopts -O2 -static -with-rtsopts=-N
+  cc-options: -static
+  ld-options: -static -pthread
+  build-depends:
+      base >=4.12 && <5
+    , heart-core >=0.1.1
+    , infernal
+    , scotty >=0.11
   default-language: Haskell2010
