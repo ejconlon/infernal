@@ -5,7 +5,7 @@ github:              "{{github-username}}{{^github-username}}githubuser{{/github
 license:             BSD3
 author:              "{{author-name}}{{^author-name}}Author name here{{/author-name}}"
 maintainer:          "{{author-email}}{{^author-email}}example@example.com{{/author-email}}"
-copyright:           "{{copyright}}{{^copyright}}{{year}}{{^year}}2020{{/year}} {{author-name}}{{^author-name}}Author name here{{/author-name}}{{/copyright}}"
+copyright:           "{{year}}{{^year}}2020{{/year}} {{author-name}}{{^author-name}}Author name here{{/author-name}}"
 
 description:         Please see the README on GitHub at <https://github.com/{{github-username}}{{^github-username}}githubuser{{/github-username}}/{{name}}#readme>
 
@@ -36,29 +36,29 @@ executables:
 {-# START_FILE Makefile #-}
 .PHONY: clean
 clean:
-  stack clean --docker
+	stack clean --docker
 
 .PHONY: build
 build:
-  stack build --docker
+	stack build --docker
 
 .PHONY: function
 function: build
-  bash ./build-function.sh
+	bash ./build-function.sh
 
 .PHONY: integration-test
 integration-test: function
-  bash ./sam/test.sh
+	bash ./sam/test.sh
 
 {-# START_FILE build-function.sh #-}
   #!/bin/bash
 
   set -eux
 
-	mkdir -p .build
-	rm -f .build/function.zip
-	cp `stack --docker path --local-install-root`/bin/bootstrap .build
-	cd .build && zip function.zip bootstrap && rm bootstrap && unzip -l function.zip
+  mkdir -p .build
+  rm -f .build/function.zip
+  cp `stack --docker path --local-install-root`/bin/bootstrap .build
+  cd .build && zip function.zip bootstrap && rm bootstrap && unzip -l function.zip
 
 {-# START_FILE app/Main.hs #-}
 module Main where
@@ -66,27 +66,27 @@ module Main where
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import Infernal (decodeRequest, encodeResponse, runSimpleMain)
+import Infernal (decodeRequest, encodeResponse, runSimpleLambda)
 
 data Request = Request
-  { _reqName :: !Text
+  { name :: !Text
   } deriving (Eq, Show, Generic)
 
 instance FromJSON Request
 
 data Response = Response
-  { _repGreeting :: !Text
+  { greeting :: !Text
   } deriving (Eq, Show, Generic)
 
 instance ToJSON Response
 
 handleRequest :: Request -> Response
-handleRequest (Request name) = Response ("Hello, " <> name)
+handleRequest req = Response ("Hello, " <> name req)
 
 main :: IO ()
 main = runSimpleLambda $ \lamReq -> do
   request <- decodeRequest lamReq
-  let response = handleResponse request
+  let response = handleRequest request
       lamRep = encodeResponse response
   pure lamRep
 
@@ -161,22 +161,35 @@ Resources:
 {-# START_FILE sam/test.sh #-}
 #!/bin/bash
 
-set -eux
+set -eu
 
 if [ ! -f .build/function.zip ]; then
   echo "Please run `make function`."
   exit 1
 fi
 
-for CASE in `ls sam/cases`
-do
-  echo "Testing case ${CASE}:"
-  REQUEST="sam/cases/${CASE}/request.json"
-  EXPECTED="sam/cases/${CASE}/response.json"
-  ACTUAL="/tmp/sam-${CASE}-response.json"
-  sam local invoke --event ${REQUEST} > ${ACTUAL}
-  diff <(tail -n1 ${ACTUAL}) <(cat ${EXPECTED})
-  echo "=============================="
-done
+pushd sam
+  for CASE in `ls cases`
+  do
+    echo "Testing case ${CASE}:"
+    REQUEST="cases/${CASE}/request.json"
+    EXPECTED="cases/${CASE}/response.json"
+    ACTUAL="/tmp/sam-${CASE}-response.json"
+    sam local invoke --event ${REQUEST} > ${ACTUAL}
+    diff <(tail -n1 ${ACTUAL}) <(cat ${EXPECTED})
+    echo "=============================="
+  done
+popd
 
 echo "All tests passed."
+
+{-# START_FILE stack.yaml #-}
+resolver: lts-14.20
+
+packages:
+- .
+
+extra-deps:
+- heart-core-0.1.1
+- heart-app-0.1.1
+- infernal-0.3.0

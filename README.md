@@ -6,7 +6,15 @@ Since AWS released custom runtimes, you don't need to play any dirty tricks to g
 Just call an `infernal` entrypoint in your `main` function, statically link your binary, and zip it up right. If you want to
 use your Lambda to serve API Gateway requests with an existing WAI app, there's a wrapper for that too.
 
+This is a batteries-included library. You'll get logging and stats out of the box if you want them (and even if you don't).
+
 ## How to write your own Lambda
+
+The easiest way to get started is to use the provided stack template and follow the generated `README`:
+
+    stack new my-haskell-lambda https://github.com/ejconlon/infernal/raw/master/stack-template.hsfiles
+
+Otherwise you can assemble things yourself:
 
 * See `Makefile`, `stack.yaml`, and `package.yaml` in `demo` for the right options to build your program
   * statically-linked
@@ -21,7 +29,7 @@ use your Lambda to serve API Gateway requests with an existing WAI app, there's 
 
 The `libs` subdir has the library, and `demo` has a small example application. They are separate `stack` projects because the demo
 needs to be built with Docker on OSX. See the `Brewfile` for test deps on OSX. Basically, if you have `stack`, `docker`, and `aws-sam-cli`
-installed, you can run `make integration-test` to check a few cases.
+installed, you can run `make integration-test` to check a few cases. When making changes to the stack template, run `make template-test`.
 
 ## Prior work
 
@@ -40,5 +48,4 @@ You can find copies of both licenses in the `licenses` directory.
 
 * Get all deps into stackage (heart-core, heart-app)
 * Set up CI
-* Provide a stack template
 * Add other standard events
