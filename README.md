@@ -30,9 +30,9 @@ Between reading their implementation and the [official documentation](https://do
 it was pretty easy to get this working. `aws-lambda-haskell-runtime` is a great library but I had trouble combining the `TemplateHaskell` entrypoint
 with some custom startup logic.
 
-Also thanks to `akotlyarov` and Seek for [serverless-haskell](https://hackage.haskell.org/package/serverless-haskell). Their API Gateway definitions are
+Also thanks to Alexey Kotlyarov and Seek for [serverless-haskell](https://hackage.haskell.org/package/serverless-haskell). Their API Gateway definitions are
 very useful, and I am grateful to not have to hand-roll JSON codecs. I did not introduce the library as a dependency because I wanted to simplify the
-definitions a bit and also avoid multiple `amazonka` dependencies not available in Stackage.
+definitions a bit and avoid multiple `amazonka` dependencies not available in Stackage.
 
 You can find copies of both licenses in the `licenses` directory.
 
