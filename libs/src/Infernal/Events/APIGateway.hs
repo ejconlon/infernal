@@ -6,7 +6,7 @@ is used as 'Data.Aeson' natively provides.
 See <https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html AWS docs> for
 information on these datatypes.
 
-These definitions are taken in part from <serverless-haskell https://hackage.haskell.org/package/serverless-haskell>.
+These definitions are taken in part from <https://hackage.haskell.org/package/serverless-haskell serverless-haskell>.
 Attribution and license information are present in the README.
 -}
 module Infernal.Events.APIGateway
