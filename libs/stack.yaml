@@ -1,8 +1,4 @@
-resolver: lts-14.27
+resolver: lts-15.11
 
 packages:
 - .
-
-extra-deps:
-- heart-core-0.1.1
-- heart-app-0.1.1

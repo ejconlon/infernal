@@ -184,12 +184,10 @@ popd
 echo "All tests passed."
 
 {-# START_FILE stack.yaml #-}
-resolver: lts-14.20
+resolver: lts-15.11
 
 packages:
 - .
 
 extra-deps:
-- heart-core-0.1.1
-- heart-app-0.1.1
-- infernal-0.3.0
+- infernal-0.4.0

@@ -1,4 +1,4 @@
-resolver: lts-14.27
+resolver: lts-15.11
 
 packages:
 - .
@@ -8,6 +8,4 @@ docker:
   repo: fpco/stack-build-small
 
 extra-deps:
-- heart-core-0.1.1
-- heart-app-0.1.1
 - ../libs
