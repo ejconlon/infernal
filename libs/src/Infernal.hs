@@ -27,7 +27,7 @@ import Control.Exception (Exception, SomeException, fromException)
 import Control.Monad (forever, void)
 import Control.Monad.Catch (MonadCatch (..), MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))
-import Control.Monad.IO.Unlift (UnliftIO (..), askUnliftIO)
+import Control.Monad.IO.Unlift (UnliftIO (..))
 import Control.Monad.Reader (MonadReader)
 import Data.Aeson (FromJSON (..), ToJSON (..), eitherDecode, encode, pairs, (.=))
 import qualified Data.ByteString.Lazy as LBS
@@ -41,7 +41,7 @@ import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import GHC.Generics (Generic)
 import Infernal.Internal.App (App, newApp)
 import Infernal.Internal.Logging (HasSimpleLog (..), SimpleLogAction, WithSimpleLog, logDebug, logError, logException)
-import Infernal.Internal.RIO (RIO, runRIO)
+import Infernal.Internal.RIO (RIO, runRIO, unliftRIO)
 import Lens.Micro (Lens')
 import Lens.Micro.Mtl (view)
 import Lens.Micro.TH (makeLenses)
@@ -353,10 +353,6 @@ lambdaClientImpl = LambdaClient
 
 httpManagerSettings :: HC.ManagerSettings
 httpManagerSettings = HC.defaultManagerSettings { HC.managerResponseTimeout = HC.responseTimeoutNone }
-
--- TODO This should go in heart-core, along with catch functions
-unliftRIO :: MonadIO m => env -> m (UnliftIO (RIO env))
-unliftRIO env = liftIO (runRIO env askUnliftIO)
 
 badRequestError :: Text -> LambdaError
 badRequestError reason = LambdaError "BadRequestError" ("Bad request: " <> reason)

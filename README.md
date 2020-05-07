@@ -6,8 +6,6 @@ Since AWS released custom runtimes, you don't need to play any dirty tricks to g
 Just call an `infernal` entrypoint in your `main` function, statically link your binary, and zip it up right. If you want to
 use your Lambda to serve API Gateway requests with an existing WAI app, there's a wrapper for that too.
 
-This is a batteries-included library. You'll get logging and stats out of the box if you want them (and even if you don't).
-
 ## How to write your own Lambda
 
 The easiest way to get started is to use the provided stack template and follow the generated `README`:
@@ -47,4 +45,5 @@ You can find copies of both licenses in the `licenses` directory.
 ## TODO
 
 * Set up CI
+* Add to Stackage
 * Add other standard events
