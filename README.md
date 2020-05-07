@@ -46,6 +46,5 @@ You can find copies of both licenses in the `licenses` directory.
 
 ## TODO
 
-* Get all deps into stackage (heart-core, heart-app)
 * Set up CI
 * Add other standard events
