@@ -11,7 +11,6 @@ description: Please see the README on GitHub at <https://github.com/ejconlon/inf
 dependencies:
 - base >=4.12 && <5
 - aeson >=1.4
-- aeson-casing >=0.2
 - exceptions >=0.10
 - text >=1.2
 

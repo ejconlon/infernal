@@ -1,7 +1,6 @@
 module Main where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), genericParseJSON, genericToJSON)
-import Data.Aeson.Casing (aesonPrefix, snakeCase)
+import Data.Aeson (FromJSON, ToJSON)
 import Control.Exception (Exception)
 import Control.Monad.Catch (throwM)
 import Data.Text (Text)
@@ -15,27 +14,24 @@ data DislikeNameError = DislikeNameError
 instance Exception DislikeNameError
 
 data Request = Request
-  { _reqName :: !Text
+  { name :: !Text
   } deriving stock (Eq, Generic, Show)
 
-instance FromJSON Request where
-   parseJSON = genericParseJSON (aesonPrefix snakeCase)
+instance FromJSON Request
 
 data Response = Response
-  { _repGreeting :: !Text
+  { greeting :: !Text
   } deriving stock (Eq, Generic, Show)
 
-instance ToJSON Response where
-   toJSON = genericToJSON (aesonPrefix snakeCase)
+instance ToJSON Response
 
 main :: IO ()
 main = do
   runSimpleLambda $ \lamReq -> do
     logDebug "In request callback"
-    req <- decodeRequest lamReq
-    let name = _reqName req
-    logDebug ("Got name " <> name)
+    Request theirName <- decodeRequest lamReq
+    logDebug ("Got name " <> theirName)
     -- We'll throw an unformatted exception when we encounter the magic name "Throw" just to test things out.
-    case name of
+    case theirName of
       "Throw" -> throwM DislikeNameError
-      _ -> pure (encodeResponse (Response ("Hello, " <> name)))
+      _ -> pure (encodeResponse (Response ("Hello, " <> theirName)))

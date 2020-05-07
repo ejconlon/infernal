@@ -189,5 +189,8 @@ resolver: lts-15.11
 packages:
 - .
 
+docker:
+  repo: fpco/stack-build-small
+
 extra-deps:
 - infernal-0.4.0
