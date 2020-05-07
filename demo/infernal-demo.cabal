@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.31.2.
+-- This file has been generated from package.yaml by hpack version 0.33.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 215ef2d4e4d48d0c92abd54a7e29023f40714adf5c96299df930f0fa07eaee0b
+-- hash: eaa97b7ecb63af23cd55df59ca4aac7d71ae6ecfc19b57fb54b75fab25ae90b5
 
 name:           infernal-demo
 version:        0.3.0
@@ -27,15 +27,17 @@ executable infernal-simple-demo
       Paths_infernal_demo
   hs-source-dirs:
       simple-app
-  default-extensions: ConstraintKinds DeriveFunctor DeriveFoldable DeriveGeneric DeriveTraversable DerivingStrategies DerivingVia GeneralizedNewtypeDeriving NoImplicitPrelude OverloadedStrings TemplateHaskell
+  default-extensions: ConstraintKinds DeriveFunctor DeriveFoldable DeriveGeneric DeriveTraversable DerivingStrategies GeneralizedNewtypeDeriving NoImplicitPrelude OverloadedStrings
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -fno-warn-unused-top-binds -threaded -rtsopts -O2 -static -with-rtsopts=-N
   cc-options: -static
   ld-options: -static -pthread
   build-depends:
-      base >=4.12 && <5
-    , heart-app >=0.1.1
-    , heart-core >=0.1.1
+      aeson >=1.4
+    , aeson-casing >=0.2
+    , base >=4.12 && <5
+    , exceptions >=0.10
     , infernal
+    , text >=1.2
   default-language: Haskell2010
 
 executable infernal-wai-demo
@@ -44,13 +46,16 @@ executable infernal-wai-demo
       Paths_infernal_demo
   hs-source-dirs:
       wai-app
-  default-extensions: ConstraintKinds DeriveFunctor DeriveFoldable DeriveGeneric DeriveTraversable DerivingStrategies DerivingVia GeneralizedNewtypeDeriving NoImplicitPrelude OverloadedStrings TemplateHaskell
+  default-extensions: ConstraintKinds DeriveFunctor DeriveFoldable DeriveGeneric DeriveTraversable DerivingStrategies GeneralizedNewtypeDeriving NoImplicitPrelude OverloadedStrings
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -fno-warn-unused-top-binds -threaded -rtsopts -O2 -static -with-rtsopts=-N
   cc-options: -static
   ld-options: -static -pthread
   build-depends:
-      base >=4.12 && <5
-    , heart-core >=0.1.1
+      aeson >=1.4
+    , aeson-casing >=0.2
+    , base >=4.12 && <5
+    , exceptions >=0.10
     , infernal
     , scotty >=0.11
+    , text >=1.2
   default-language: Haskell2010

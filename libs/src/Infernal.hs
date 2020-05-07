@@ -23,19 +23,31 @@ module Infernal
   , runSimpleLambda
   ) where
 
+import Control.Exception (Exception, SomeException, fromException)
 import Control.Monad (forever, void)
-import Data.Aeson (eitherDecode, encode, pairs, (.=))
+import Control.Monad.Catch (MonadCatch (..), MonadThrow (..))
+import Control.Monad.IO.Class (MonadIO (..))
+import Control.Monad.IO.Unlift (UnliftIO (..), askUnliftIO)
+import Control.Monad.Reader (MonadReader)
+import Data.Aeson (FromJSON (..), ToJSON (..), eitherDecode, encode, pairs, (.=))
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.CaseInsensitive as CI
+import Data.Hashable (Hashable)
 import Data.Maybe (isJust)
+import Data.String (IsString)
+import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
-import Heart.App.App (App, newApp)
-import Heart.App.Logging (HasSimpleLog (..), SimpleLogAction, WithSimpleLog, logDebug, logError, logException)
-import Heart.Core.Prelude
-import Heart.Core.RIO (RIO, runRIO)
+import GHC.Generics (Generic)
+import Infernal.Internal.App (App, newApp)
+import Infernal.Internal.Logging (HasSimpleLog (..), SimpleLogAction, WithSimpleLog, logDebug, logError, logException)
+import Infernal.Internal.RIO (RIO, runRIO)
+import Lens.Micro (Lens')
+import Lens.Micro.Mtl (view)
+import Lens.Micro.TH (makeLenses)
 import qualified Network.HTTP.Client as HC
 import qualified Network.HTTP.Types as HT
+import Prelude
 import System.Exit (ExitCode)
 import System.IO (BufferMode (LineBuffering), hSetBuffering, stderr, stdout)
 import Text.Read (readMaybe)
@@ -66,7 +78,7 @@ newtype LambdaResponse = LambdaResponse
 data LambdaError = LambdaError
   { _lerrErrorType :: !Text     -- ^ The type of error that occurred. In this library is is often @StartCase@-formated.
   , _lerrErrorMessage :: !Text  -- ^ A useful error message
-  } deriving stock (Eq, Show, Typeable, Generic)
+  } deriving stock (Eq, Show, Generic)
 
 instance Exception LambdaError
 
@@ -390,6 +402,6 @@ runSimpleLambda :: RunCallback (RIO App) -> IO ()
 runSimpleLambda cb = do
   hSetBuffering stdout LineBuffering
   hSetBuffering stderr LineBuffering
-  app <- newApp
+  let app = newApp
   unio <- unliftRIO app
   runRIO app (runLambda unio defaultInitErrorCallback (const (pure (defaultCallbackConfig cb))))

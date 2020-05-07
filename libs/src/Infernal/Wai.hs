@@ -11,18 +11,20 @@ module Infernal.Wai
   ) where
 
 import Control.Concurrent.MVar (newEmptyMVar, putMVar, takeMVar)
+import Control.Monad.Catch (MonadThrow)
+import Control.Monad.IO.Class (MonadIO (..))
 import Data.Binary.Builder (Builder, toLazyByteString)
 import qualified Data.ByteString as ByteString
 import Data.ByteString.Lazy (toStrict)
 import Data.IORef (modifyIORef', newIORef, readIORef)
 import qualified Data.Text as Text
 import Data.Text.Encoding (decodeUtf8)
-import Heart.App.Logging (WithSimpleLog, logDebug)
-import Heart.Core.Prelude
 import Infernal (RunCallback, decodeRequest, encodeResponse, runSimpleLambda)
 import Infernal.Events.APIGateway (APIGatewayProxyRequest (..), APIGatewayProxyResponse (..))
+import Infernal.Internal.Logging (WithSimpleLog, logDebug)
 import Network.Wai (Application, Response, StreamingBody, defaultRequest, responseToStream)
 import Network.Wai.Internal (Request (..), ResponseReceived (..))
+import Prelude
 
 -- | Turn an 'APIGatewayProxyRequest' into a WAI 'Request'. (Not all fields will be present!)
 adaptRequest :: APIGatewayProxyRequest -> Request
@@ -33,7 +35,7 @@ adaptRequest proxyReq =
   , pathInfo = dropWhile Text.null (Text.split (=='/') (decodeUtf8 (_agprqPath proxyReq)))
   , queryString = _agprqQueryStringParameters proxyReq
   , requestHeaders = _agprqHeaders proxyReq
-  , requestBody = maybe empty pure (_agprqBody proxyReq)
+  , requestBody = maybe mempty pure (_agprqBody proxyReq)
   }
 
 consumeStream :: StreamingBody -> IO Builder

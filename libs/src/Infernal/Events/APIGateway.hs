@@ -14,15 +14,18 @@ module Infernal.Events.APIGateway
   , APIGatewayProxyResponse (..)
   ) where
 
-import Data.Aeson (object, withObject, (.!=), (.:), (.:?), (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.!=), (.:), (.:?), (.=))
 import Data.Bifunctor (bimap)
 import Data.ByteString (ByteString)
 import qualified Data.CaseInsensitive as CI
+import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
+import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
-import Heart.Core.Prelude
+import GHC.Generics (Generic)
 import qualified Network.HTTP.Types as HT
+import Prelude
 
 fromAWSQuery :: HashMap Text Text -> HT.Query
 fromAWSQuery = fmap toQueryItem . HashMap.toList where

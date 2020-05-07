@@ -1,7 +1,7 @@
 module Main where
 
 import Infernal.Wai (runSimpleWaiLambda)
-import Heart.Core.Prelude
+import Prelude
 import Web.Scotty (ScottyM, get, html, param, scottyApp)
 
 server :: ScottyM ()

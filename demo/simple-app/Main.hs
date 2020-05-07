@@ -1,23 +1,32 @@
 module Main where
 
+import Data.Aeson (FromJSON (..), ToJSON (..), genericParseJSON, genericToJSON)
+import Data.Aeson.Casing (aesonPrefix, snakeCase)
+import Control.Exception (Exception)
+import Control.Monad.Catch (throwM)
+import Data.Text (Text)
+import GHC.Generics (Generic)
 import Infernal (decodeRequest, encodeResponse, runSimpleLambda)
-import Heart.App.Logging (logDebug)
-import Heart.Core.Aeson (AesonRecord (..))
-import Heart.Core.Prelude
+import Infernal.Internal.Logging (logDebug)
+import Prelude
 
 data DislikeNameError = DislikeNameError
-  deriving stock (Eq, Show, Typeable)
+  deriving stock (Eq, Show)
 instance Exception DislikeNameError
 
 data Request = Request
   { _reqName :: !Text
-  } deriving stock (Eq, Show, Generic)
-    deriving FromJSON via (AesonRecord Request)
+  } deriving stock (Eq, Generic, Show)
+
+instance FromJSON Request where
+   parseJSON = genericParseJSON (aesonPrefix snakeCase)
 
 data Response = Response
   { _repGreeting :: !Text
-  } deriving stock (Eq, Show, Generic)
-    deriving ToJSON via (AesonRecord Response)
+  } deriving stock (Eq, Generic, Show)
+
+instance ToJSON Response where
+   toJSON = genericToJSON (aesonPrefix snakeCase)
 
 main :: IO ()
 main = do

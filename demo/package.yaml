@@ -9,7 +9,11 @@ copyright:           "(c) 2020 Eric Conlon"
 description: Please see the README on GitHub at <https://github.com/ejconlon/infernal#readme>
 
 dependencies:
-- base >= 4.12 && < 5
+- base >=4.12 && <5
+- aeson >=1.4
+- aeson-casing >=0.2
+- exceptions >=0.10
+- text >=1.2
 
 default-extensions:
   - ConstraintKinds
@@ -18,11 +22,9 @@ default-extensions:
   - DeriveGeneric
   - DeriveTraversable
   - DerivingStrategies
-  - DerivingVia
   - GeneralizedNewtypeDeriving
   - NoImplicitPrelude
   - OverloadedStrings
-  - TemplateHaskell
 
 ghc-options:
 - -Wall
@@ -48,8 +50,6 @@ executables:
     ld-options: -static -pthread
     dependencies:
     - infernal
-    - heart-app >=0.1.1
-    - heart-core >=0.1.1
 
   infernal-wai-demo:
     main:                Main.hs
@@ -64,5 +64,4 @@ executables:
     ld-options: -static -pthread
     dependencies:
     - infernal
-    - heart-core >=0.1.1
     - scotty >=0.11
