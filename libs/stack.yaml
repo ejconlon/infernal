@@ -2,3 +2,7 @@ resolver: lts-15.11
 
 packages:
 - .
+
+extra-deps:
+- little-logger-0.1.0
+- little-rio-0.1.0

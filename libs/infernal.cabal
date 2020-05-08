@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: fe4ff780bb0fb36d6c0cbda85811c8885ccf1ac40f4fae4f0cb83a7be7cfc641
+-- hash: 3e72ee8a176a23ff4e8b2e60f739ffe4798421d4f70cbd236dc7c34e7e953d2d
 
 name:           infernal
-version:        0.4.0
+version:        0.5.0
 synopsis:       The Infernal Machine - An AWS Lambda Custom Runtime for Haskell
 description:    Please see the README on GitHub at <https://github.com/ejconlon/infernal#readme>
 category:       AWS
@@ -28,9 +28,6 @@ library
   exposed-modules:
       Infernal
       Infernal.Events.APIGateway
-      Infernal.Internal.App
-      Infernal.Internal.Logging
-      Infernal.Internal.RIO
       Infernal.Wai
   other-modules:
       Paths_infernal
@@ -44,19 +41,17 @@ library
     , binary >=0.8
     , bytestring >=0.10
     , case-insensitive >=1.2
-    , co-log >=0.4
-    , co-log-core >=0.2
-    , containers >=0.6
     , exceptions >=0.10
     , hashable >=1.3
     , http-client >=0.6
     , http-types >=0.12
+    , little-logger >=0.1
+    , little-rio >=0.1
     , microlens >=0.4
     , microlens-mtl >=0.2
     , microlens-th >=0.4
     , mtl >=2.2
     , text >=1.2
-    , unliftio >=0.2
     , unliftio-core >=0.1
     , unordered-containers >=0.2
     , wai >=3.2

@@ -39,19 +39,18 @@ import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import GHC.Generics (Generic)
-import Infernal.Internal.App (App, newApp)
-import Infernal.Internal.Logging (HasSimpleLog (..), SimpleLogAction, WithSimpleLog, logDebug, logError, logException)
-import Infernal.Internal.RIO (RIO, runRIO, unliftRIO)
+import LittleLogger (HasSimpleLog (..), LogApp, SimpleLogAction, WithSimpleLog, logDebug, logError, logException, newLogApp)
+import LittleRIO (RIO, runRIO, unliftRIO)
 import Lens.Micro (Lens')
 import Lens.Micro.Mtl (view)
 import Lens.Micro.TH (makeLenses)
 import qualified Network.HTTP.Client as HC
 import qualified Network.HTTP.Types as HT
 import Prelude
+import System.Environment (getEnv)
 import System.Exit (ExitCode)
 import System.IO (BufferMode (LineBuffering), hSetBuffering, stderr, stdout)
 import Text.Read (readMaybe)
-import UnliftIO.Environment (getEnv)
 
 -- | The UUID associated with a Lambda request.
 newtype LambdaRequestId = LambdaRequestId
@@ -229,8 +228,8 @@ pollLoop client unio cbc =
     logException err
     unliftInto unio (uncaughtErrCb err)
 
-getEnvText :: (MonadThrow m, MonadIO m) => Text -> m Text
-getEnvText = fmap Text.pack . getEnv . Text.unpack
+getEnvText :: MonadIO m => Text -> m Text
+getEnvText = liftIO . fmap Text.pack . getEnv . Text.unpack
 
 readLambdaVars :: (MonadThrow m, MonadIO m) => m LambdaVars
 readLambdaVars = do
@@ -394,10 +393,10 @@ runLambda unio initErrCb cbcInit = do
 -- | A simple entrypoint that delegates to 'runLambda'. Use this as the body of your @main@ function if you want to get a Lambda function up and running quickly.
 --   All you need to do is provide a 'RunCallback' that handles JSON-encoded requests and returns JSON-encoded responses (or throws 'LambdaError' exceptions).
 --   Your callback has access to a simple logger (try 'logDebug', for example) whose output will be collected by Lambda and published to CloudWatch.
-runSimpleLambda :: RunCallback (RIO App) -> IO ()
+runSimpleLambda :: RunCallback (RIO LogApp) -> IO ()
 runSimpleLambda cb = do
   hSetBuffering stdout LineBuffering
   hSetBuffering stderr LineBuffering
-  let app = newApp
+  let app = newLogApp
   unio <- unliftRIO app
   runRIO app (runLambda unio defaultInitErrorCallback (const (pure (defaultCallbackConfig cb))))
