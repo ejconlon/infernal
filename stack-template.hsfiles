@@ -10,7 +10,7 @@ copyright:           "{{year}}{{^year}}2020{{/year}} {{author-name}}{{^author-na
 description:         Please see the README on GitHub at <https://github.com/{{github-username}}{{^github-username}}githubuser{{/github-username}}/{{name}}#readme>
 
 dependencies:
-- base >=4.12 && <5
+- base >= 4.12 && <5
 
 default-extensions:
   DeriveGeneric
@@ -29,9 +29,9 @@ executables:
     cc-options: -static
     ld-options: -static -pthread
     dependencies:
-    - aeson >=1.4
-    - infernal >=0.3
-    - text >=1.2
+    - aeson >= 1.4
+    - infernal >= 0.5
+    - text >= 1.2
 
 {-# START_FILE Makefile #-}
 .PHONY: clean
@@ -193,4 +193,6 @@ docker:
   repo: fpco/stack-build-small
 
 extra-deps:
-- infernal-0.4.0
+- infernal-0.5.0
+- little-logger-0.1.0
+- little-rio-0.1.0

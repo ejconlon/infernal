@@ -6,7 +6,7 @@ import Control.Monad.Catch (throwM)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Infernal (decodeRequest, encodeResponse, runSimpleLambda)
-import Infernal.Internal.Logging (logDebug)
+import LittleLogger (logDebug)
 import Prelude
 
 data DislikeNameError = DislikeNameError
