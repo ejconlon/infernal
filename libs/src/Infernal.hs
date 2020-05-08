@@ -39,11 +39,12 @@ import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import GHC.Generics (Generic)
-import LittleLogger (HasSimpleLog (..), LogApp, SimpleLogAction, WithSimpleLog, logDebug, logError, logException, newLogApp)
-import LittleRIO (RIO, runRIO, unliftRIO)
 import Lens.Micro (Lens')
 import Lens.Micro.Mtl (view)
 import Lens.Micro.TH (makeLenses)
+import LittleLogger (HasSimpleLog (..), LogApp, SimpleLogAction, WithSimpleLog, logDebug, logError, logException,
+                     newLogApp)
+import LittleRIO (RIO, runRIO, unliftRIO)
 import qualified Network.HTTP.Client as HC
 import qualified Network.HTTP.Types as HT
 import Prelude
