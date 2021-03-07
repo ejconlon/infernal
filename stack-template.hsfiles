@@ -177,7 +177,7 @@ pushd sam
     ACTUAL="/tmp/sam-${CASE}-response.json"
     sam local invoke --event ${REQUEST} > ${ACTUAL}
     # Ensure there's a newline at the end of the file
-    awk '/^$/{f=1}END{ if (!f) {print "\n"}}1' ${ACTUAL}
+    echo "" >> ${ACTUAL}
     diff <(tail -n1 ${ACTUAL}) <(cat ${EXPECTED})
     echo "=============================="
   done
@@ -193,7 +193,8 @@ packages:
 
 docker:
   enable: false
-  repo: ejconlon/haskell-custom:8.10.4
+  repo: "ejconlon/haskell-custom:8.10.4"
+  stack-exe: image
 
 extra-deps:
 - infernal-0.6.0

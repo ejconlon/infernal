@@ -22,7 +22,6 @@ do
   ACTUAL="/tmp/${VARIANT}-${CASE}-response.json"
   sam local invoke ${FUNCTION} --event ${REQUEST} > ${ACTUAL}
   # Ensure there's a newline at the end of the file
-  awk '/^$/{f=1}END{ if (!f) {print "\n"}}1' ${ACTUAL}
   echo "" >> ${ACTUAL}
   diff <(tail -n1 ${ACTUAL}) <(cat ${EXPECTED})
   echo "=============================="
