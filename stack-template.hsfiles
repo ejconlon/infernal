@@ -5,7 +5,7 @@ github:              "{{github-username}}{{^github-username}}githubuser{{/github
 license:             BSD3
 author:              "{{author-name}}{{^author-name}}Author name here{{/author-name}}"
 maintainer:          "{{author-email}}{{^author-email}}example@example.com{{/author-email}}"
-copyright:           "{{year}}{{^year}}2020{{/year}} {{author-name}}{{^author-name}}Author name here{{/author-name}}"
+copyright:           "{{year}}{{^year}}2021{{/year}} {{author-name}}{{^author-name}}Author name here{{/author-name}}"
 
 description:         Please see the README on GitHub at <https://github.com/{{github-username}}{{^github-username}}githubuser{{/github-username}}/{{name}}#readme>
 
@@ -29,9 +29,9 @@ executables:
     cc-options: -static
     ld-options: -static -pthread
     dependencies:
-    - aeson >= 1.4
-    - infernal >= 0.5
-    - text >= 1.2
+    - aeson >= 1.5 && < 1.6
+    - infernal >= 0.6 && < 0.7
+    - text >= 1.2 && < 1.3
 
 {-# START_FILE Makefile #-}
 .PHONY: clean
@@ -176,6 +176,8 @@ pushd sam
     EXPECTED="cases/${CASE}/response.json"
     ACTUAL="/tmp/sam-${CASE}-response.json"
     sam local invoke --event ${REQUEST} > ${ACTUAL}
+    # Ensure there's a newline at the end of the file
+    awk '/^$/{f=1}END{ if (!f) {print "\n"}}1' ${ACTUAL}
     diff <(tail -n1 ${ACTUAL}) <(cat ${EXPECTED})
     echo "=============================="
   done
@@ -184,15 +186,14 @@ popd
 echo "All tests passed."
 
 {-# START_FILE stack.yaml #-}
-resolver: lts-15.11
+resolver: lts-17.5
 
 packages:
 - .
 
 docker:
-  repo: fpco/stack-build-small
+  enable: false
+  repo: ejconlon/haskell-custom:8.10.4
 
 extra-deps:
-- infernal-0.5.0
-- little-logger-0.1.0
-- little-rio-0.1.0
+- infernal-0.6.0

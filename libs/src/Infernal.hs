@@ -42,8 +42,8 @@ import GHC.Generics (Generic)
 import Lens.Micro (Lens')
 import Lens.Micro.Mtl (view)
 import Lens.Micro.TH (makeLenses)
-import LittleLogger (HasSimpleLog (..), LogApp, SimpleLogAction, WithSimpleLog, logDebug, logError, logException,
-                     newLogApp)
+import LittleLogger (HasSimpleLog (..), SimpleLogAction, WithSimpleLog, defaultSimpleLogAction, logDebug, logError,
+                     logException)
 import LittleRIO (RIO, runRIO, unliftRIO)
 import qualified Network.HTTP.Client as HC
 import qualified Network.HTTP.Types as HT
@@ -53,24 +53,30 @@ import System.Exit (ExitCode)
 import System.IO (BufferMode (LineBuffering), hSetBuffering, stderr, stdout)
 import Text.Read (readMaybe)
 
+class ToText a where
+  toText :: a -> Text
+
+instance ToText Text where
+  toText = id
+
 -- | The UUID associated with a Lambda request.
 newtype LambdaRequestId = LambdaRequestId
   { _unLambdaRequestId :: Text
-  } deriving newtype (Eq, Show, Ord, IsString, Hashable)
+  } deriving newtype (Eq, Show, Ord, IsString, Hashable, ToText)
 
 -- | The request parsed from the "next invocation" API (<https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html#runtimes-api-next docs>)
 data LambdaRequest = LambdaRequest
-  { _lreqId :: !LambdaRequestId   -- ^ From the @Lambda-Runtime-Aws-Request-Id@ header
-  , _lreqTraceId :: !Text         -- ^ From the @Lambda-Runtime-Trace-Id@ header
-  , _lreqFunctionArn :: !Text     -- ^ From the @Lambda-Runtime-Invoked-Function-Arn@ header
-  , _lreqDeadlineMs :: !Int       -- ^ From the @Lambda-Runtime-Deadline-Ms@ header, an epoch deadline in ms
-  , _lreqBody :: !LBS.ByteString  -- ^ The unparsed request body. Typically you will 'Data.Aeson.decode' this.
+  { _lreqId :: !LambdaRequestId        -- ^ From the @Lambda-Runtime-Aws-Request-Id@ header
+  , _lreqTraceId :: !(Maybe Text)      -- ^ From the @Lambda-Runtime-Trace-Id@ header
+  , _lreqFunctionArn :: !(Maybe Text)  -- ^ From the @Lambda-Runtime-Invoked-Function-Arn@ header
+  , _lreqDeadlineMs :: !Int            -- ^ From the @Lambda-Runtime-Deadline-Ms@ header, an epoch deadline in ms
+  , _lreqBody :: !LBS.ByteString       -- ^ The unparsed request body. Typically you will 'Data.Aeson.decode' this.
   } deriving stock (Eq, Show)
 
 -- | A response to the 'LambdaRequest', typically as encoded JSON.
 newtype LambdaResponse = LambdaResponse
   { _unLambdaResponse :: LBS.ByteString
-  } deriving (Eq, Show, Ord, IsString, Hashable)
+  } deriving newtype (Eq, Show, Ord, IsString, Hashable)
 
 -- | An error formatted to propagate to AWS (<https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html#runtimes-api-invokeerror docs>).
 --   Note that this is an 'Exception' so you can throw it to short-circuit processing and report useful information. By default, if you throw
@@ -184,19 +190,19 @@ catchRethrowExitCode = catchRethrowWhen (isJust . castExitCode)
 
 handleInvokeError :: WithSimpleLog env m => PostLambdaInvokeError m -> UnliftIO n -> InvokeErrorCallback n -> LambdaRequest -> SomeException -> m ()
 handleInvokeError postErr unio invokeErrCb lamReq err = do
-  let lamIdText = _unLambdaRequestId (_lreqId lamReq)
-  logError ("Caught invocation error for request id " <> lamIdText <> ":")
+  let lamReqId = _lreqId lamReq
+  logError ("Caught invocation error for request id " <> toText lamReqId <> ":")
   logException err
   lamErr <- case castLambdaError err of
     Just lamErr -> do
-      logError ("Posting original invocation error for request id " <> lamIdText)
+      logError ("Posting original invocation error for request id " <> toText lamReqId)
       pure lamErr
     Nothing -> do
       lamErr <- unliftInto unio (invokeErrCb lamReq err)
-      logError ("Posting new invocation error for request id " <> lamIdText <> ":")
+      logError ("Posting new invocation error for request id " <> toText lamReqId <> ":")
       logException lamErr
       pure lamErr
-  postErr (_lreqId lamReq) lamErr
+  postErr lamReqId lamErr
 
 guardInvokeError :: (MonadCatch m, WithSimpleLog env m) => PostLambdaInvokeError m -> UnliftIO n -> InvokeErrorCallback n -> LambdaRequest -> m () -> m ()
 guardInvokeError postErr unio invokeErrCb lamReq body = catchRethrowExitCode body (handleInvokeError postErr unio invokeErrCb lamReq)
@@ -213,13 +219,12 @@ pollAndRespond client unio cbc = do
   logDebug "Polling for request"
   lamReq <- _lcGetLambdaRequest client
   let lamReqId = _lreqId lamReq
-      lamIdText = _unLambdaRequestId lamReqId
-  logDebug ("Servicing request id " <> lamIdText)
+  logDebug ("Servicing request id " <> toText lamReqId)
   guardInvokeError postErr unio invokeErrCb lamReq $ do
     lamRepBody <- unliftInto unio (runCb lamReq)
-    logDebug ("Posting response to request id " <> lamIdText)
+    logDebug ("Posting response to request id " <> toText lamReqId)
     postRep lamReqId lamRepBody
-    logDebug ("Finished request id " <> lamIdText)
+    logDebug ("Finished request id " <> toText lamReqId)
 
 pollLoop :: (MonadCatch m, WithSimpleLog env m) => LambdaClient m -> UnliftIO n -> CallbackConfig n -> m ()
 pollLoop client unio cbc =
@@ -294,17 +299,17 @@ missingHeaderError name = LambdaError "MissingHeaderError" ("Missing header " <>
 invalidDeadlineError :: Text -> LambdaError
 invalidDeadlineError deadlineMsText = LambdaError "InvalidDeadlineError" ("Invalid value for deadline: " <> deadlineMsText)
 
+lookupOptionalHeader :: Text -> HT.ResponseHeaders -> Maybe Text
+lookupOptionalHeader name = fmap decodeUtf8 . lookup (CI.mk (encodeUtf8 name))
+
 lookupHeader :: MonadThrow m => Text -> HT.ResponseHeaders -> m Text
-lookupHeader name headers =
-  case lookup (CI.mk (encodeUtf8 name)) headers of
-    Nothing -> throwM (missingHeaderError name)
-    Just value -> pure (decodeUtf8 value)
+lookupHeader name = maybe (throwM (missingHeaderError name)) pure . lookupOptionalHeader name
 
 parseLambdaRequest :: MonadThrow m => HT.ResponseHeaders -> LBS.ByteString -> m LambdaRequest
 parseLambdaRequest headers body = do
   reqId <- lookupHeader "Lambda-Runtime-Aws-Request-Id" headers
-  traceId <- lookupHeader "Lambda-Runtime-Trace-Id" headers
-  functionArn <- lookupHeader "Lambda-Runtime-Invoked-Function-Arn" headers
+  let traceId = lookupOptionalHeader "Lambda-Runtime-Trace-Id" headers
+      functionArn = lookupOptionalHeader "Lambda-Runtime-Invoked-Function-Arn" headers
   deadlineMsText <- lookupHeader "Lambda-Runtime-Deadline-Ms" headers
   deadlineMs <- case readMaybe (Text.unpack deadlineMsText) of
     Just value -> pure value
@@ -338,10 +343,10 @@ postLambdaInitErrorImpl :: MonadLambdaImpl env m => PostLambdaInitError m
 postLambdaInitErrorImpl = postRequest ["init", "error"] . encode
 
 postLambdaInvokeErrorImpl :: MonadLambdaImpl env m => PostLambdaInvokeError m
-postLambdaInvokeErrorImpl lamReqId = postRequest ["invocation", _unLambdaRequestId lamReqId, "error"] . encode
+postLambdaInvokeErrorImpl lamReqId = postRequest ["invocation", toText lamReqId, "error"] . encode
 
 postLambdaResponseImpl :: MonadLambdaImpl env m => PostLambdaResponse m
-postLambdaResponseImpl lamReqId = postRequest ["invocation", _unLambdaRequestId lamReqId, "response"] . _unLambdaResponse
+postLambdaResponseImpl lamReqId = postRequest ["invocation", toText lamReqId, "response"] . _unLambdaResponse
 
 lambdaClientImpl :: MonadLambdaImpl env m => LambdaClient m
 lambdaClientImpl = LambdaClient
@@ -394,10 +399,10 @@ runLambda unio initErrCb cbcInit = do
 -- | A simple entrypoint that delegates to 'runLambda'. Use this as the body of your @main@ function if you want to get a Lambda function up and running quickly.
 --   All you need to do is provide a 'RunCallback' that handles JSON-encoded requests and returns JSON-encoded responses (or throws 'LambdaError' exceptions).
 --   Your callback has access to a simple logger (try 'logDebug', for example) whose output will be collected by Lambda and published to CloudWatch.
-runSimpleLambda :: RunCallback (RIO LogApp) -> IO ()
+runSimpleLambda :: RunCallback (RIO SimpleLogAction) -> IO ()
 runSimpleLambda cb = do
   hSetBuffering stdout LineBuffering
   hSetBuffering stderr LineBuffering
-  let app = newLogApp
+  let app = defaultSimpleLogAction
   unio <- unliftRIO app
   runRIO app (runLambda unio defaultInitErrorCallback (const (pure (defaultCallbackConfig cb))))

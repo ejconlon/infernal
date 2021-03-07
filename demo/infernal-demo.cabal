@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b1d9f8b874f6e950c3e2df18eb2937ce624e1e9cb2f322235cc295da1ff39144
+-- hash: b001c9f61a0a9b8e95576cefa32325a58482e2a7de9878cc58bf09eb72e1f265
 
 name:           infernal-demo
-version:        0.5.0
+version:        0.6.0
 description:    Please see the README on GitHub at <https://github.com/ejconlon/infernal#readme>
 homepage:       https://github.com/ejconlon/infernal#readme
 bug-reports:    https://github.com/ejconlon/infernal/issues
@@ -32,12 +32,12 @@ executable infernal-simple-demo
   cc-options: -static
   ld-options: -static -pthread
   build-depends:
-      aeson >=1.4
+      aeson >=1.5 && <1.6
     , base >=4.12 && <5
-    , exceptions >=0.10
+    , exceptions >=0.10 && <0.11
     , infernal
-    , little-logger >=0.1
-    , text >=1.2
+    , little-logger >=0.3 && <0.4
+    , text >=1.2 && <1.3
   default-language: Haskell2010
 
 executable infernal-wai-demo
@@ -53,5 +53,5 @@ executable infernal-wai-demo
   build-depends:
       base >=4.12 && <5
     , infernal
-    , scotty >=0.11
+    , scotty >=0.12 && <0.13
   default-language: Haskell2010

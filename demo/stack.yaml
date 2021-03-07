@@ -1,13 +1,12 @@
-resolver: lts-15.12
+resolver: lts-17.5
+
+docker:
+  enable: false
+  repo: "ejconlon/haskell-custom:8.10.4"
+  stack-exe: image
 
 packages:
 - .
 
-docker:
-  enable: false
-  repo: fpco/stack-build-small
-
 extra-deps:
 - ../libs
-- little-logger-0.1.0
-- little-rio-0.1.0

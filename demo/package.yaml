@@ -1,5 +1,5 @@
 name:                infernal-demo
-version:             0.5.0
+version:             0.6.0
 github:              "ejconlon/infernal"
 license:             BSD3
 author:              "Eric Conlon"
@@ -46,10 +46,10 @@ executables:
     ld-options: -static -pthread
     dependencies:
     - infernal
-    - aeson >= 1.4
-    - exceptions >= 0.10
-    - text >= 1.2
-    - little-logger >= 0.1
+    - aeson >= 1.5 && < 1.6
+    - exceptions >= 0.10 && < 0.11
+    - text >= 1.2 && < 1.3
+    - little-logger >= 0.3 && < 0.4
 
   infernal-wai-demo:
     main:                Main.hs
@@ -64,4 +64,4 @@ executables:
     ld-options: -static -pthread
     dependencies:
     - infernal
-    - scotty >= 0.11
+    - scotty >= 0.12 && < 0.13
