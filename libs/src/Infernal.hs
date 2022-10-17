@@ -23,7 +23,7 @@ module Infernal
   , runSimpleLambda
   ) where
 
-import Control.Exception (Exception, SomeException, fromException)
+import Control.Exception (Exception (displayException), SomeException, fromException)
 import Control.Monad (forever, void)
 import Control.Monad.Catch (MonadCatch (..), MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))
@@ -42,8 +42,7 @@ import GHC.Generics (Generic)
 import Lens.Micro (Lens')
 import Lens.Micro.Mtl (view)
 import Lens.Micro.TH (makeLenses)
-import LittleLogger (HasSimpleLog (..), SimpleLogAction, WithSimpleLog, defaultSimpleLogAction, logDebug, logError,
-                     logException)
+import LittleLogger (HasLogAction (..), LogAction, WithLogAction, defaultLogAction, logDebugN, logErrorN, MonadLogger)
 import LittleRIO (RIO, runRIO, unliftRIO)
 import qualified Network.HTTP.Client as HC
 import qualified Network.HTTP.Types as HT
@@ -52,12 +51,16 @@ import System.Environment (getEnv)
 import System.Exit (ExitCode)
 import System.IO (BufferMode (LineBuffering), hSetBuffering, stderr, stdout)
 import Text.Read (readMaybe)
+import qualified Data.Text as T
 
 class ToText a where
   toText :: a -> Text
 
 instance ToText Text where
   toText = id
+
+exnText :: Exception e => e -> Text
+exnText = T.pack . displayException
 
 -- | The UUID associated with a Lambda request.
 newtype LambdaRequestId = LambdaRequestId
@@ -111,13 +114,13 @@ data LambdaVars = LambdaVars
 data LambdaEnv = LambdaEnv
   { _leManager :: !HC.Manager
   , _leVars :: !LambdaVars
-  , _leSimpleLog :: !SimpleLogAction
+  , _leLogAction :: !LogAction
   }
 
 $(makeLenses ''LambdaEnv)
 
-instance HasSimpleLog LambdaEnv where
-  simpleLogL = leSimpleLog
+instance HasLogAction LambdaEnv where
+  logActionL = leLogAction
 
 class HasLambdaEnv env where
   lambdaEnvL :: Lens' env LambdaEnv
@@ -188,50 +191,47 @@ catchRethrow act handler = catch act (\err -> handler err >> throwM err)
 catchRethrowExitCode :: MonadCatch m => m a -> (SomeException -> m a) -> m a
 catchRethrowExitCode = catchRethrowWhen (isJust . castExitCode)
 
-handleInvokeError :: WithSimpleLog env m => PostLambdaInvokeError m -> UnliftIO n -> InvokeErrorCallback n -> LambdaRequest -> SomeException -> m ()
+handleInvokeError :: (MonadLogger m, MonadIO m) => PostLambdaInvokeError m -> UnliftIO n -> InvokeErrorCallback n -> LambdaRequest -> SomeException -> m ()
 handleInvokeError postErr unio invokeErrCb lamReq err = do
   let lamReqId = _lreqId lamReq
-  logError ("Caught invocation error for request id " <> toText lamReqId <> ":")
-  logException err
+  logErrorN ("Caught invocation error for request id " <> toText lamReqId <> ": " <> exnText err)
   lamErr <- case castLambdaError err of
     Just lamErr -> do
-      logError ("Posting original invocation error for request id " <> toText lamReqId)
+      logErrorN ("Posting original invocation error for request id " <> toText lamReqId)
       pure lamErr
     Nothing -> do
       lamErr <- unliftInto unio (invokeErrCb lamReq err)
-      logError ("Posting new invocation error for request id " <> toText lamReqId <> ":")
-      logException lamErr
+      logErrorN ("Posting new invocation error for request id " <> toText lamReqId <> ": " <> exnText lamErr)
       pure lamErr
   postErr lamReqId lamErr
 
-guardInvokeError :: (MonadCatch m, WithSimpleLog env m) => PostLambdaInvokeError m -> UnliftIO n -> InvokeErrorCallback n -> LambdaRequest -> m () -> m ()
+guardInvokeError :: (MonadCatch m, MonadLogger m, MonadIO m) => PostLambdaInvokeError m -> UnliftIO n -> InvokeErrorCallback n -> LambdaRequest -> m () -> m ()
 guardInvokeError postErr unio invokeErrCb lamReq body = catchRethrowExitCode body (handleInvokeError postErr unio invokeErrCb lamReq)
 
 missedDeadlineError :: Int -> LambdaError
 missedDeadlineError deadlineMs = LambdaError "MissedDeadlineError" ("Missed adjusted deadline of " <> Text.pack (show deadlineMs) <> "ms.")
 
-pollAndRespond :: (MonadCatch m, WithSimpleLog env m) => LambdaClient m -> UnliftIO n -> CallbackConfig n -> m ()
+pollAndRespond :: (MonadCatch m, MonadLogger m, MonadIO m) => LambdaClient m -> UnliftIO n -> CallbackConfig n -> m ()
 pollAndRespond client unio cbc = do
   let runCb = _cbcRunCallback cbc
       invokeErrCb = _cbcInvokeErrorCallback cbc
       postErr = _lcPostLambdaInvokeError client
       postRep = _lcPostLambdaResponse client
-  logDebug "Polling for request"
+  logDebugN "Polling for request"
   lamReq <- _lcGetLambdaRequest client
   let lamReqId = _lreqId lamReq
-  logDebug ("Servicing request id " <> toText lamReqId)
+  logDebugN  ("Servicing request id " <> toText lamReqId)
   guardInvokeError postErr unio invokeErrCb lamReq $ do
     lamRepBody <- unliftInto unio (runCb lamReq)
-    logDebug ("Posting response to request id " <> toText lamReqId)
+    logDebugN  ("Posting response to request id " <> toText lamReqId)
     postRep lamReqId lamRepBody
-    logDebug ("Finished request id " <> toText lamReqId)
+    logDebugN  ("Finished request id " <> toText lamReqId)
 
-pollLoop :: (MonadCatch m, WithSimpleLog env m) => LambdaClient m -> UnliftIO n -> CallbackConfig n -> m ()
+pollLoop :: (MonadCatch m, MonadLogger m, MonadIO m) => LambdaClient m -> UnliftIO n -> CallbackConfig n -> m ()
 pollLoop client unio cbc =
   let uncaughtErrCb = _cbcUncaughtErrorCallback cbc
   in forever $ catchRethrowExitCode (pollAndRespond client unio cbc) $ \err -> do
-    logError "Handling uncaught error:"
-    logException err
+    logErrorN ("Handling uncaught error: " <> exnText err)
     unliftInto unio (uncaughtErrCb err)
 
 getEnvText :: MonadIO m => Text -> m Text
@@ -258,12 +258,12 @@ readLambdaVars = do
     , _lvHandlerName = handlerName
     }
 
-newLambdaEnv :: (MonadThrow m, WithSimpleLog env m) => m LambdaEnv
+newLambdaEnv :: (MonadThrow m, WithLogAction env m) => m LambdaEnv
 newLambdaEnv = do
   manager <- liftIO (HC.newManager httpManagerSettings)
   vars <- readLambdaVars
-  simpleLog <- view simpleLogL
-  pure (LambdaEnv manager vars simpleLog)
+  logAction <- view logActionL
+  pure (LambdaEnv manager vars logAction)
 
 type MonadLambdaImpl env m = (MonadIO m, MonadThrow m, MonadReader env m, HasLambdaEnv env)
 
@@ -374,35 +374,33 @@ encodeResponse = LambdaResponse . encode
 --   This runs the main loop of our AWS Lambda Custom Runtime to fetch invocations, process them, and report errors or results.
 --   Control will not return from this function, and AWS Lambda will terminate the process at its will.
 runLambda ::
-  (MonadCatch m, WithSimpleLog env m)
+  (MonadCatch m, WithLogAction env m, MonadLogger m)
   => UnliftIO n                            -- ^ Runs your monad @n@ in IO (see @MonadUnliftIO@ from @unliftio-core@)
   -> InitErrorCallback n                   -- ^ Error mapper for the callback builder
   -> (LambdaVars -> n (CallbackConfig n))  -- ^ Callback builder. When possible, do init work here so the framework can propagate init errors to AWS.
   -> m ()
 runLambda unio initErrCb cbcInit = do
-  logDebug "Initializing lambda environment"
+  logDebugN "Initializing lambda environment"
   lambdaEnv <- newLambdaEnv
   runRIO lambdaEnv $ do
     let client = lambdaClientImpl
         lamVars = _leVars lambdaEnv
-    logDebug "Initializing callbacks"
+    logDebugN  "Initializing callbacks"
     cbc <- catchRethrow (unliftInto unio (cbcInit lamVars)) $ \err -> do
-      logError "Caught initialization error:"
-      logException err
+      logErrorN ("Caught initialization error: " <> exnText err)
       lamErr <- unliftInto unio (initErrCb err)
-      logError "Posting mapped initialization error:"
-      logException lamErr
+      logErrorN ("Posting mapped initialization error: " <> exnText lamErr)
       _lcPostLambdaInitError client lamErr
-    logDebug "Starting poll loop"
+    logDebugN  "Starting poll loop"
     pollLoop client unio cbc
 
 -- | A simple entrypoint that delegates to 'runLambda'. Use this as the body of your @main@ function if you want to get a Lambda function up and running quickly.
 --   All you need to do is provide a 'RunCallback' that handles JSON-encoded requests and returns JSON-encoded responses (or throws 'LambdaError' exceptions).
 --   Your callback has access to a simple logger (try 'logDebug', for example) whose output will be collected by Lambda and published to CloudWatch.
-runSimpleLambda :: RunCallback (RIO SimpleLogAction) -> IO ()
+runSimpleLambda :: RunCallback (RIO LogAction) -> IO ()
 runSimpleLambda cb = do
   hSetBuffering stdout LineBuffering
   hSetBuffering stderr LineBuffering
-  let app = defaultSimpleLogAction
+  let app = defaultLogAction
   unio <- unliftRIO app
   runRIO app (runLambda unio defaultInitErrorCallback (const (pure (defaultCallbackConfig cb))))

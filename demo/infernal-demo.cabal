@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.35.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b001c9f61a0a9b8e95576cefa32325a58482e2a7de9878cc58bf09eb72e1f265
+-- hash: d93f2138f399a9cf4fd80ea0a7fe7d46747a56ba52037237f7fc1d01ee7f806b
 
 name:           infernal-demo
 version:        0.6.0
@@ -27,17 +27,26 @@ executable infernal-simple-demo
       Paths_infernal_demo
   hs-source-dirs:
       simple-app
-  default-extensions: ConstraintKinds DeriveFunctor DeriveFoldable DeriveGeneric DeriveTraversable DerivingStrategies GeneralizedNewtypeDeriving NoImplicitPrelude OverloadedStrings
+  default-extensions:
+      ConstraintKinds
+      DeriveFunctor
+      DeriveFoldable
+      DeriveGeneric
+      DeriveTraversable
+      DerivingStrategies
+      GeneralizedNewtypeDeriving
+      NoImplicitPrelude
+      OverloadedStrings
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -fno-warn-unused-top-binds -threaded -rtsopts -O2 -static -with-rtsopts=-N
   cc-options: -static
   ld-options: -static -pthread
   build-depends:
-      aeson >=1.5 && <1.6
+      aeson ==2.0.*
     , base >=4.12 && <5
-    , exceptions >=0.10 && <0.11
+    , exceptions ==0.10.*
     , infernal
-    , little-logger >=0.3 && <0.4
-    , text >=1.2 && <1.3
+    , little-logger >=1.0.1 && <1.1
+    , text ==1.2.*
   default-language: Haskell2010
 
 executable infernal-wai-demo
@@ -46,12 +55,21 @@ executable infernal-wai-demo
       Paths_infernal_demo
   hs-source-dirs:
       wai-app
-  default-extensions: ConstraintKinds DeriveFunctor DeriveFoldable DeriveGeneric DeriveTraversable DerivingStrategies GeneralizedNewtypeDeriving NoImplicitPrelude OverloadedStrings
+  default-extensions:
+      ConstraintKinds
+      DeriveFunctor
+      DeriveFoldable
+      DeriveGeneric
+      DeriveTraversable
+      DerivingStrategies
+      GeneralizedNewtypeDeriving
+      NoImplicitPrelude
+      OverloadedStrings
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -fno-warn-unused-top-binds -threaded -rtsopts -O2 -static -with-rtsopts=-N
   cc-options: -static
   ld-options: -static -pthread
   build-depends:
       base >=4.12 && <5
     , infernal
-    , scotty >=0.12 && <0.13
+    , scotty ==0.12.*
   default-language: Haskell2010

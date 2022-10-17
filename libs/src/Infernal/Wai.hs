@@ -21,7 +21,7 @@ import qualified Data.Text as Text
 import Data.Text.Encoding (decodeUtf8)
 import Infernal (RunCallback, decodeRequest, encodeResponse, runSimpleLambda)
 import Infernal.Events.APIGateway (APIGatewayProxyRequest (..), APIGatewayProxyResponse (..))
-import LittleLogger (WithSimpleLog, logDebug)
+import LittleLogger (WithLogAction, logDebugN, MonadLogger)
 import Network.Wai (Application, Response, StreamingBody, defaultRequest, responseToStream)
 import Network.Wai.Internal (Request (..), ResponseReceived (..))
 import Prelude
@@ -68,12 +68,12 @@ adaptApplication app proxyReq = do
   liftIO (takeMVar v)
 
 -- | Adapt a WAI 'Application' into a 'RunCallback' to handle API Gateway proxy requests encoded as Lambda requests.
-applicationCallback :: (MonadThrow n, WithSimpleLog env n) => Application -> RunCallback n
+applicationCallback :: (MonadThrow n, WithLogAction env n, MonadLogger n) => Application -> RunCallback n
 applicationCallback app lamReq = do
   proxyReq <- decodeRequest lamReq
-  logDebug ("Servicing proxy request " <> decodeUtf8 (_agprqHttpMethod proxyReq) <> " " <> decodeUtf8 (_agprqPath proxyReq))
+  logDebugN ("Servicing proxy request " <> decodeUtf8 (_agprqHttpMethod proxyReq) <> " " <> decodeUtf8 (_agprqPath proxyReq))
   proxyRep <- adaptApplication app proxyReq
-  logDebug ("Responding with status " <> Text.pack (show (_agprsStatusCode proxyRep)))
+  logDebugN ("Responding with status " <> Text.pack (show (_agprsStatusCode proxyRep)))
   let lamRep = encodeResponse proxyRep
   pure lamRep
 
