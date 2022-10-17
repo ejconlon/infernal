@@ -21,7 +21,7 @@ import qualified Data.Text as Text
 import Data.Text.Encoding (decodeUtf8)
 import Infernal (RunCallback, decodeRequest, encodeResponse, runSimpleLambda)
 import Infernal.Events.APIGateway (APIGatewayProxyRequest (..), APIGatewayProxyResponse (..))
-import LittleLogger (WithLogAction, logDebugN, MonadLogger)
+import LittleLogger (MonadLogger, WithLogAction, logDebugN)
 import Network.Wai (Application, Response, StreamingBody, defaultRequest, responseToStream)
 import Network.Wai.Internal (Request (..), ResponseReceived (..))
 import Prelude

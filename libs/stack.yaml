@@ -1,8 +1,7 @@
-resolver: lts-19.28
+resolver: lts-19.29
 
 packages:
-- libs
-- demo
+- .
 
 extra-deps:
 - little-logger-1.0.1

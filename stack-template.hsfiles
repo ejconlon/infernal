@@ -29,8 +29,8 @@ executables:
     cc-options: -static
     ld-options: -static -pthread
     dependencies:
-    - aeson >= 1.5 && < 1.6
-    - infernal >= 0.6 && < 0.7
+    - aeson >= 2.0 && < 2.1
+    - infernal >= 0.7 && < 0.8
     - text >= 1.2 && < 1.3
 
 {-# START_FILE Makefile #-}
@@ -186,15 +186,15 @@ popd
 echo "All tests passed."
 
 {-# START_FILE stack.yaml #-}
-resolver: lts-17.5
+resolver: lts-19.29
 
 packages:
 - .
 
 docker:
-  enable: false
-  repo: "ejconlon/haskell-custom:8.10.4"
-  stack-exe: image
+  image: "haskell:9.0.2"
 
 extra-deps:
 - infernal-0.6.0
+- little-logger-1.0.1
+- little-rio-1.0.1

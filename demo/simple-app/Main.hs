@@ -6,7 +6,7 @@ import Control.Monad.Catch (throwM)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Infernal (decodeRequest, encodeResponse, runSimpleLambda)
-import LittleLogger (logDebug)
+import LittleLogger (logDebugN)
 import Prelude
 
 data DislikeNameError = DislikeNameError
@@ -28,9 +28,9 @@ instance ToJSON Response
 main :: IO ()
 main = do
   runSimpleLambda $ \lamReq -> do
-    logDebug "In request callback"
+    logDebugN "In request callback"
     Request theirName <- decodeRequest lamReq
-    logDebug ("Got name " <> theirName)
+    logDebugN ("Got name " <> theirName)
     -- We'll throw an unformatted exception when we encounter the magic name "Throw" just to test things out.
     case theirName of
       "Throw" -> throwM DislikeNameError

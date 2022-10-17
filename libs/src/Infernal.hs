@@ -37,12 +37,13 @@ import Data.Maybe (isJust)
 import Data.String (IsString)
 import Data.Text (Text)
 import qualified Data.Text as Text
+import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens')
 import Lens.Micro.Mtl (view)
 import Lens.Micro.TH (makeLenses)
-import LittleLogger (HasLogAction (..), LogAction, WithLogAction, defaultLogAction, logDebugN, logErrorN, MonadLogger)
+import LittleLogger (HasLogAction (..), LogAction, MonadLogger, WithLogAction, defaultLogAction, logDebugN, logErrorN)
 import LittleRIO (RIO, runRIO, unliftRIO)
 import qualified Network.HTTP.Client as HC
 import qualified Network.HTTP.Types as HT
@@ -51,7 +52,6 @@ import System.Environment (getEnv)
 import System.Exit (ExitCode)
 import System.IO (BufferMode (LineBuffering), hSetBuffering, stderr, stdout)
 import Text.Read (readMaybe)
-import qualified Data.Text as T
 
 class ToText a where
   toText :: a -> Text

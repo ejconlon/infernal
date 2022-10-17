@@ -1,0 +1,12 @@
+resolver: lts-19.29
+
+docker:
+  image: "haskell:9.0.2"
+
+packages:
+- .
+
+extra-deps:
+- ../libs
+- little-logger-1.0.1
+- little-rio-1.0.1
