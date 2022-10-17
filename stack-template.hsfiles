@@ -195,6 +195,6 @@ docker:
   image: "haskell:9.0.2"
 
 extra-deps:
-- infernal-0.6.0
+- infernal-0.7.0
 - little-logger-1.0.1
 - little-rio-1.0.1
